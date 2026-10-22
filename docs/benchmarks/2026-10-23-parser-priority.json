@@ -1,0 +1,70 @@
+{
+  "frames_per_case": 192,
+  "deployed": false,
+  "results": [
+    {
+      "variant": "face-baseline-A",
+      "fps": 2.754072865416425,
+      "latency_ms": 703.1960218314551,
+      "bpu_mean_percent": 88.078125,
+      "max_pixel_error": 0,
+      "mae": 0.0
+    },
+    {
+      "variant": "face-parser-A",
+      "fps": 2.753127912049694,
+      "latency_ms": 704.59744122275,
+      "bpu_mean_percent": 84.44186046511628,
+      "max_pixel_error": 0,
+      "mae": 0.0
+    },
+    {
+      "variant": "face-parser-B",
+      "fps": 2.724222562199235,
+      "latency_ms": 714.6852727281464,
+      "bpu_mean_percent": 85.86259541984732,
+      "max_pixel_error": 0,
+      "mae": 0.0
+    },
+    {
+      "variant": "face-baseline-B",
+      "fps": 2.7538099651991974,
+      "latency_ms": 703.5785656141798,
+      "bpu_mean_percent": 88.046875,
+      "max_pixel_error": 0,
+      "mae": 0.0
+    },
+    {
+      "variant": "background-baseline-A",
+      "fps": 8.678763853707018,
+      "latency_ms": 209.09903108157897,
+      "bpu_mean_percent": 29.352941176470587,
+      "max_pixel_error": 0,
+      "mae": 0.0
+    },
+    {
+      "variant": "background-parser-A",
+      "fps": 8.698319126915242,
+      "latency_ms": 209.89745699994668,
+      "bpu_mean_percent": 27.11764705882353,
+      "max_pixel_error": 0,
+      "mae": 0.0
+    },
+    {
+      "variant": "background-parser-B",
+      "fps": 8.612989109769309,
+      "latency_ms": 211.92073644571158,
+      "bpu_mean_percent": 27.65714285714286,
+      "max_pixel_error": 0,
+      "mae": 0.0
+    },
+    {
+      "variant": "background-baseline-B",
+      "fps": 8.672047381798116,
+      "latency_ms": 210.4658886956298,
+      "bpu_mean_percent": 28.176470588235293,
+      "max_pixel_error": 0,
+      "mae": 0.0
+    }
+  ]
+}
