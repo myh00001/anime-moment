@@ -1,0 +1,384 @@
+{
+  "frames_per_case": 192,
+  "total_frames": 3072,
+  "summary": {
+    "face": {
+      "baseline": {
+        "fps": 2.736536272560611,
+        "latency_ms": 709.7125550842397,
+        "face_counts": [
+          {
+            "1": 192
+          },
+          {
+            "1": 192
+          }
+        ]
+      },
+      "adaptive": {
+        "fps": 2.746132031559803,
+        "latency_ms": 707.0348693233778,
+        "face_counts": [
+          {
+            "1": 192
+          },
+          {
+            "1": 192
+          }
+        ]
+      },
+      "max_pixel_error": 0,
+      "fps_percent": 0.35065345544325055,
+      "latency_percent": -0.37729158680925856
+    },
+    "background": {
+      "baseline": {
+        "fps": 8.212251258731044,
+        "latency_ms": 222.13922828528794,
+        "face_counts": [
+          {
+            "0": 192
+          },
+          {
+            "0": 192
+          }
+        ]
+      },
+      "adaptive": {
+        "fps": 8.701320017088987,
+        "latency_ms": 209.67342136683112,
+        "face_counts": [
+          {
+            "0": 192
+          },
+          {
+            "0": 192
+          }
+        ]
+      },
+      "max_pixel_error": 0,
+      "fps_percent": 5.95535551640578,
+      "latency_percent": -5.611708933483506
+    },
+    "blank": {
+      "baseline": {
+        "fps": 8.237498868393304,
+        "latency_ms": 220.9135374483352,
+        "face_counts": [
+          {
+            "0": 192
+          },
+          {
+            "0": 192
+          }
+        ]
+      },
+      "adaptive": {
+        "fps": 8.697408457601924,
+        "latency_ms": 209.32296123098251,
+        "face_counts": [
+          {
+            "0": 192
+          },
+          {
+            "0": 192
+          }
+        ]
+      },
+      "max_pixel_error": 0,
+      "fps_percent": 5.583121728529261,
+      "latency_percent": -5.246657290100821
+    },
+    "mixed": {
+      "baseline": {
+        "fps": 3.38875400169671,
+        "latency_ms": 506.4268980597568,
+        "face_counts": [
+          {
+            "0": 100,
+            "1": 92
+          },
+          {
+            "0": 104,
+            "1": 88
+          }
+        ]
+      },
+      "adaptive": {
+        "fps": 3.382934186680372,
+        "latency_ms": 493.7523385190359,
+        "face_counts": [
+          {
+            "0": 104,
+            "1": 88
+          },
+          {
+            "0": 102,
+            "1": 90
+          }
+        ]
+      },
+      "max_pixel_error": 0,
+      "fps_percent": -0.1717390820762943,
+      "latency_percent": -2.502742170544292
+    }
+  },
+  "cases": [
+    {
+      "variant": "face-baseline-A",
+      "fps": 2.71933787645071,
+      "latency_ms": 715.9243107445412,
+      "bpu_mean_percent": 77.3030303030303,
+      "max_pixel_error": 0,
+      "mae": 0.0
+    },
+    {
+      "variant": "face-adaptive-A",
+      "fps": 2.7540219976311398,
+      "latency_ms": 703.3251643152238,
+      "bpu_mean_percent": 78.6046511627907,
+      "max_pixel_error": 0,
+      "mae": 0.0
+    },
+    {
+      "variant": "face-adaptive-B",
+      "fps": 2.738242065488466,
+      "latency_ms": 710.7445743315319,
+      "bpu_mean_percent": 85.17557251908397,
+      "max_pixel_error": 0,
+      "mae": 0.0
+    },
+    {
+      "variant": "face-baseline-B",
+      "fps": 2.753734668670512,
+      "latency_ms": 703.5007994239382,
+      "bpu_mean_percent": 88.375,
+      "max_pixel_error": 0,
+      "mae": 0.0
+    },
+    {
+      "variant": "background-baseline-A",
+      "fps": 8.230757459647913,
+      "latency_ms": 221.72824597820457,
+      "bpu_mean_percent": 26.083333333333332,
+      "max_pixel_error": 0,
+      "mae": 0.0
+    },
+    {
+      "variant": "background-adaptive-A",
+      "fps": 8.686712279777657,
+      "latency_ms": 209.71228458693471,
+      "bpu_mean_percent": 28.38235294117647,
+      "max_pixel_error": 0,
+      "mae": 0.0
+    },
+    {
+      "variant": "background-adaptive-B",
+      "fps": 8.715927754400317,
+      "latency_ms": 209.6345581467275,
+      "bpu_mean_percent": 26.970588235294116,
+      "max_pixel_error": 0,
+      "mae": 0.0
+    },
+    {
+      "variant": "background-baseline-B",
+      "fps": 8.193745057814176,
+      "latency_ms": 222.55021059237131,
+      "bpu_mean_percent": 28.52777777777778,
+      "max_pixel_error": 0,
+      "mae": 0.0
+    },
+    {
+      "variant": "blank-baseline-A",
+      "fps": 8.220187938833327,
+      "latency_ms": 220.2966970597503,
+      "bpu_mean_percent": 28.083333333333332,
+      "max_pixel_error": 0,
+      "mae": 0.0
+    },
+    {
+      "variant": "blank-adaptive-A",
+      "fps": 8.662181249137731,
+      "latency_ms": 210.07570102175993,
+      "bpu_mean_percent": 28.264705882352942,
+      "max_pixel_error": 0,
+      "mae": 0.0
+    },
+    {
+      "variant": "blank-adaptive-B",
+      "fps": 8.732635666066114,
+      "latency_ms": 208.57022144020507,
+      "bpu_mean_percent": 28.5,
+      "max_pixel_error": 0,
+      "mae": 0.0
+    },
+    {
+      "variant": "blank-baseline-B",
+      "fps": 8.254809797953282,
+      "latency_ms": 221.5303778369201,
+      "bpu_mean_percent": 27.88888888888889,
+      "max_pixel_error": 0,
+      "mae": 0.0
+    },
+    {
+      "variant": "mixed-baseline-A",
+      "fps": 3.3645014209626445,
+      "latency_ms": 521.5139075488897,
+      "bpu_mean_percent": 60.728155339805824,
+      "max_pixel_error": 0,
+      "mae": 0.0
+    },
+    {
+      "variant": "mixed-adaptive-A",
+      "fps": 3.3746045716297175,
+      "latency_ms": 483.38953082611624,
+      "bpu_mean_percent": 64.5,
+      "max_pixel_error": 0,
+      "mae": 0.0
+    },
+    {
+      "variant": "mixed-adaptive-B",
+      "fps": 3.3912638017310273,
+      "latency_ms": 504.11514621195556,
+      "bpu_mean_percent": 57.96078431372549,
+      "max_pixel_error": 0,
+      "mae": 0.0
+    },
+    {
+      "variant": "mixed-baseline-B",
+      "fps": 3.413006582430776,
+      "latency_ms": 491.33988857062394,
+      "bpu_mean_percent": 64.95049504950495,
+      "max_pixel_error": 0,
+      "mae": 0.0
+    }
+  ],
+  "pixel_validation": [
+    {
+      "input": "00",
+      "shape": [
+        1080,
+        1920,
+        3
+      ],
+      "milliseconds": {
+        "baseline": 598.3144530000573,
+        "candidate": 592.5538300000426
+      },
+      "faces": {
+        "baseline": 1,
+        "candidate": 1
+      },
+      "max_pixel_error": 0,
+      "mae": 0.0
+    },
+    {
+      "input": "06",
+      "shape": [
+        1080,
+        1920,
+        3
+      ],
+      "milliseconds": {
+        "baseline": 592.2796104998724,
+        "candidate": 594.702524000013
+      },
+      "faces": {
+        "baseline": 1,
+        "candidate": 1
+      },
+      "max_pixel_error": 0,
+      "mae": 0.0
+    },
+    {
+      "input": "07",
+      "shape": [
+        1080,
+        1920,
+        3
+      ],
+      "milliseconds": {
+        "baseline": 587.3602319998099,
+        "candidate": 588.8360590001867
+      },
+      "faces": {
+        "baseline": 1,
+        "candidate": 1
+      },
+      "max_pixel_error": 0,
+      "mae": 0.0
+    },
+    {
+      "input": "near",
+      "shape": [
+        1080,
+        1920,
+        3
+      ],
+      "milliseconds": {
+        "baseline": 597.3604460000388,
+        "candidate": 599.7672959997544
+      },
+      "faces": {
+        "baseline": 1,
+        "candidate": 1
+      },
+      "max_pixel_error": 0,
+      "mae": 0.0
+    },
+    {
+      "input": "blank",
+      "shape": [
+        1080,
+        1920,
+        3
+      ],
+      "milliseconds": {
+        "baseline": 158.98270100001355,
+        "candidate": 182.58657199999107
+      },
+      "faces": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "max_pixel_error": 0,
+      "mae": 0.0
+    },
+    {
+      "input": "two-faces",
+      "shape": [
+        540,
+        1920,
+        3
+      ],
+      "milliseconds": {
+        "baseline": 957.5746680000066,
+        "candidate": 956.1367789999622
+      },
+      "faces": {
+        "baseline": 2,
+        "candidate": 2
+      },
+      "max_pixel_error": 0,
+      "mae": 0.0
+    },
+    {
+      "input": "portrait",
+      "shape": [
+        1920,
+        1080,
+        3
+      ],
+      "milliseconds": {
+        "baseline": 592.2251510000933,
+        "candidate": 610.2853644999868
+      },
+      "faces": {
+        "baseline": 1,
+        "candidate": 1
+      },
+      "max_pixel_error": 0,
+      "mae": 0.0
+    }
+  ]
+}

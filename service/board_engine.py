@@ -199,6 +199,13 @@ class BoardCamera(AnimeCamera):
         return cv2.cvtColor(source, cv2.COLOR_RGB2LAB)
 
     def render(self, rgb):
+        # The previous render joined its source future before returning.
+        # Change OpenCV's process-wide pool only at this quiet frame boundary.
+        # First frames and frames following a detected face keep six threads;
+        # background-only work benefits from fewer competing CPU threads.
+        desired_threads = 6 if self.last_face_stats.get('detected', 1) else 3
+        if cv2.getNumThreads() != desired_threads:
+            cv2.setNumThreads(desired_threads)
         h, w = rgb.shape[:2]
         size = (max(32, round(w * self.scene_size / max(w, h) / 4) * 4),
                 max(32, round(h * self.scene_size / max(w, h) / 4) * 4))
