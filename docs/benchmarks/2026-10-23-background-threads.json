@@ -1,0 +1,105 @@
+{
+  "frames_per_case": 128,
+  "deployed": false,
+  "results": [
+    {
+      "variant": "cv6-omp2-0",
+      "fps": 8.185711420794846,
+      "latency_ms": 220.3315381999952,
+      "bpu_mean_percent": 28.428571428571427,
+      "max_pixel_error": 0,
+      "mae": 0.0,
+      "face_counts": [
+        0
+      ]
+    },
+    {
+      "variant": "cv1-omp2-1",
+      "fps": 6.506290627842649,
+      "latency_ms": 291.4671768999862,
+      "bpu_mean_percent": 23.275862068965516,
+      "max_pixel_error": 0,
+      "mae": 0.0,
+      "face_counts": [
+        0
+      ]
+    },
+    {
+      "variant": "cv2-omp2-2",
+      "fps": 8.386728629271506,
+      "latency_ms": 221.46092747500083,
+      "bpu_mean_percent": 27.476190476190474,
+      "max_pixel_error": 0,
+      "mae": 0.0,
+      "face_counts": [
+        0
+      ]
+    },
+    {
+      "variant": "cv3-omp2-3",
+      "fps": 8.687911822192188,
+      "latency_ms": 210.02058988332615,
+      "bpu_mean_percent": 27.105263157894736,
+      "max_pixel_error": 0,
+      "mae": 0.0,
+      "face_counts": [
+        0
+      ]
+    },
+    {
+      "variant": "cv4-omp2-4",
+      "fps": 8.582379525740668,
+      "latency_ms": 211.7659925333252,
+      "bpu_mean_percent": 27.6,
+      "max_pixel_error": 0,
+      "mae": 0.0,
+      "face_counts": [
+        0
+      ]
+    },
+    {
+      "variant": "cv5-omp2-5",
+      "fps": 8.492537042946594,
+      "latency_ms": 215.40559474167745,
+      "bpu_mean_percent": 27.75,
+      "max_pixel_error": 0,
+      "mae": 0.0,
+      "face_counts": [
+        0
+      ]
+    },
+    {
+      "variant": "cv7-omp2-6",
+      "fps": 7.89416476916235,
+      "latency_ms": 228.63600764166372,
+      "bpu_mean_percent": 26.181818181818183,
+      "max_pixel_error": 0,
+      "mae": 0.0,
+      "face_counts": [
+        0
+      ]
+    },
+    {
+      "variant": "cv8-omp2-7",
+      "fps": 7.7901307622597855,
+      "latency_ms": 232.55645475001833,
+      "bpu_mean_percent": 27.608695652173914,
+      "max_pixel_error": 0,
+      "mae": 0.0,
+      "face_counts": [
+        0
+      ]
+    },
+    {
+      "variant": "cv6-omp2-8",
+      "fps": 8.182218670418573,
+      "latency_ms": 221.88313135000803,
+      "bpu_mean_percent": 25.761904761904763,
+      "max_pixel_error": 0,
+      "mae": 0.0,
+      "face_counts": [
+        0
+      ]
+    }
+  ]
+}
