@@ -1,0 +1,52 @@
+{
+  "completion_reason": "deadline",
+  "source_commit": "c997533",
+  "output": [
+    1920,
+    1080
+  ],
+  "mirror": true,
+  "start_utc": "2026-10-22T19:41:36.644449+00:00",
+  "last_sample_utc": "2026-10-22T20:14:59.372852+00:00",
+  "sampling_interval_seconds": 5,
+  "sample_count": 401,
+  "duration_seconds": 2002.728403,
+  "generated_frames": 18976,
+  "counter_fps": 9.4750740897142,
+  "rolling_fps": {
+    "mean": 9.482199043098394,
+    "minimum": 8.897725696342652,
+    "p5": 9.31563458218971,
+    "median": 9.48218277368355,
+    "p95": 9.655276787330271,
+    "maximum": 9.73767130217155
+  },
+  "detected_face_counts": [
+    0
+  ],
+  "cpu_mean_percent": 75.9521861021578,
+  "bpu_mean_percent": 35.38403990024938,
+  "temperature_ranges_celsius": {
+    "pvt_mcu_pvtc1_t1": [
+      43.717,
+      44.452
+    ],
+    "pvt_cmn_pvtc1_t1": [
+      46.104,
+      48.126
+    ],
+    "pvt_mcu_pvtc1_t2": [
+      43.713,
+      44.265
+    ],
+    "pvt_cmn_pvtc1_t2": [
+      46.662,
+      48.5
+    ],
+    "pvt_bpu_pvtc1_t1": [
+      46.107,
+      47.21
+    ]
+  },
+  "frame_counter_strictly_increasing": true
+}
