@@ -3,7 +3,7 @@ import json
 import os
 from pathlib import Path
 
-DEFAULT_SETTINGS = {'width': 960, 'height': 540, 'rotation': 0, 'mirror': True}
+DEFAULT_SETTINGS = {'width': 1920, 'height': 1080, 'rotation': 0, 'mirror': True}
 
 
 def validate_settings(values):

@@ -29,6 +29,8 @@ RDK S100、系统 4.0.4-Beta、HBRT 4.2.11，输出 960×540，2026-10-22：
 
 ## 环境与模型
 
+默认输出为当前支持的最高长边1920像素；16:9摄像头对应1920×1080，旋转后自动保持比例。左上角设置仍可手动调低分辨率以提高帧率。“恢复默认”同样恢复1920长边。输出尺寸不等于模型原生生成分辨率。
+
 - RDK S100 / aarch64 Ubuntu 22.04 图形桌面，已安装匹配的 D-Robotics `hbm_runtime`（本项目验证 HBRT 4.2.11）。
 - USB UVC 摄像头及连接到 S100 的显示器。
 - Python 3.10；系统 GTK3、PyGObject、Cairo、V4L2 工具；Python 包版本见 `service/requirements.txt`。

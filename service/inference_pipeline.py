@@ -15,9 +15,9 @@ def render_worker(slot, tasks, events, release_stage='structure'):
     sys.path.insert(0, str(root / 'vendor'))
     import cv2
     from board_engine import BoardCamera
-    from display_settings import prepare_frame, output_dimensions
+    from display_settings import DEFAULT_SETTINGS, prepare_frame, output_dimensions
     camera = BoardCamera()
-    camera.scene_size = 960
+    camera.scene_size = max(DEFAULT_SETTINGS['width'],DEFAULT_SETTINGS['height'])
     if release_stage in ('structure', 'anime'):
         key = 'portrait_v2_512' if release_stage == 'structure' else 'portrait_anime'
         original_runner = camera.trt[key]
