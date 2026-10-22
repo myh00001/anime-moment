@@ -1,4 +1,5 @@
 from pathlib import Path
+import concurrent.futures
 import cv2
 import numpy as np
 from face_tracking import FaceContinuity
@@ -8,6 +9,7 @@ class AnimeCamera:
 
     def __init__(self):
         self.scene_size = 640
+        self._analysis_pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
         self.previous_source = self.previous_output = None
         self.use_tracking = self.use_temporal = False
         self.face_continuity = FaceContinuity()
@@ -20,14 +22,8 @@ class AnimeCamera:
         radius = ((xx - 256) / 195) ** 2 + ((yy - 260) / 235) ** 2
         return np.clip((1 - radius) * 6, 0, 1).astype(np.float32)
 
-    def render(self, rgb):
-        h, w = rgb.shape[:2]
-        self._scene_request = True
-        try:
-            out = self.generate(rgb, self.scene_size)
-        finally:
-            self._scene_request = False
-        oh, ow = out.shape[:2]
+    def analyze_source(self, rgb, size):
+        ow, oh = size
         source = cv2.resize(rgb, (ow, oh), interpolation=cv2.INTER_AREA) if self.use_tracking or self.use_temporal else None
         detect_scale = 480 / max(ow, oh)
         dw, dh = (round(ow * detect_scale), round(oh * detect_scale))
@@ -35,18 +31,42 @@ class AnimeCamera:
         detect = np.zeros((480, 480, 3), dtype=np.uint8)
         detect[py:py + dh, px:px + dw] = cv2.resize(rgb, (dw, dh), interpolation=cv2.INTER_AREA)
         _, faces = self.detector.detect(cv2.cvtColor(detect, cv2.COLOR_RGB2BGR))
+        gray = cv2.cvtColor(source if source is not None else rgb, cv2.COLOR_RGB2GRAY)
+        sharpness = round(float(cv2.Laplacian(gray, cv2.CV_32F).var()), 2)
+        return source, gray, faces, detect_scale, px, py, sharpness
+
+    def render(self, rgb):
+        h, w = rgb.shape[:2]
+        predicted_size = (max(32, round(w * self.scene_size / max(w, h) / 4) * 4),
+                          max(32, round(h * self.scene_size / max(w, h) / 4) * 4))
+        analysis = self._analysis_pool.submit(self.analyze_source, rgb, predicted_size)
+        self._scene_request = True
+        try:
+            out = self.generate(rgb, self.scene_size)
+        except BaseException:
+            try:
+                analysis.result()
+            except Exception:
+                pass
+            raise
+        finally:
+            self._scene_request = False
+        oh, ow = out.shape[:2]
+        if (ow, oh) != predicted_size:
+            analysis.result()
+            raise RuntimeError('Detector prefetch size mismatch')
+        source, gray, faces, detect_scale, px, py, sharpness = analysis.result()
         landmarks = []
         head_boxes = []
         if faces is not None:
             ordered = sorted(faces, key=lambda f: f[2] * f[3], reverse=True)[:3]
             landmarks = [(face[4:14].reshape(5, 2) - np.array([px, py])) / detect_scale for face in ordered]
             head_boxes = [np.r_[(face[:2] - np.array([px, py])) / detect_scale, face[2:4] / detect_scale] for face in ordered]
-        gray = cv2.cvtColor(source if source is not None else rgb, cv2.COLOR_RGB2GRAY)
         if self.use_tracking:
             points_list, tracked = self.face_continuity.update(gray, landmarks)
         else:
             points_list, tracked = (landmarks, 0)
-        self.last_face_stats = {'detected': len(landmarks), 'tracked': tracked, 'refined': 0, 'input_sharpness': round(float(cv2.Laplacian(gray, cv2.CV_32F).var()), 2)}
+        self.last_face_stats = {'detected': len(landmarks), 'tracked': tracked, 'refined': 0, 'input_sharpness': sharpness}
         face_coverage = np.zeros((oh, ow), np.float32)
         self._remaining_faces = len(points_list)
         if not points_list and getattr(self, 'on_bpu_chain_done', None):

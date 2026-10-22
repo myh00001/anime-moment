@@ -41,7 +41,7 @@ class Player:
   self.window.show_all()
   if start_workers:
    self.window.fullscreen()
-   threading.Thread(target=self.capture,daemon=True).start();self.processing_thread=threading.Thread(target=self.process,daemon=True);self.processing_thread.start();GLib.timeout_add(40,self.paint)
+   self.capture_thread=threading.Thread(target=self.capture,daemon=True);self.capture_thread.start();self.processing_thread=threading.Thread(target=self.process,daemon=True);self.processing_thread.start();GLib.timeout_add(40,self.paint)
    threading.Thread(target=self.monitor_resources,daemon=True).start();GLib.timeout_add(500,self.refresh_info)
  def pointer_motion(self,window,event):
   _,x,y,_=self.window.get_window().get_device_position(event.get_device())
@@ -220,4 +220,5 @@ if __name__=='__main__':
  try:Gtk.main()
  finally:
   player.running=False
+  if hasattr(player,'capture_thread'):player.capture_thread.join(timeout=5)
   if hasattr(player,'processing_thread'):player.processing_thread.join(timeout=10)
