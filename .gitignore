@@ -16,6 +16,8 @@ local-models/
 *.npz
 *.log
 service/local-display-*.json
+service/display-settings.json
+service/display-settings.json.tmp
 config-backup/
 samples/
 captures/

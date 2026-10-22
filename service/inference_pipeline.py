@@ -1,7 +1,7 @@
-"""Two independent Python interpreters, at most one main BPU chain in flight.
+"""Two independent Python interpreters, at most two fresh frames in flight.
 
-The next latest camera frame starts when the previous frame reaches its CPU
-tail. No frame batching, temporal reuse, or unbounded input/output queue.
+The next latest frame starts after the previous last-face structure stage.
+This fills inter-model CPU gaps without unbounded BPU task accumulation.
 """
 import multiprocessing as mp
 import queue
@@ -9,20 +9,32 @@ import time
 from pathlib import Path
 
 
-def render_worker(slot, tasks, events):
+def render_worker(slot, tasks, events, release_stage='structure'):
     import sys
     root = Path(__file__).resolve().parent
     sys.path.insert(0, str(root / 'vendor'))
     import cv2
     from board_engine import BoardCamera
+    from display_settings import prepare_frame
     camera = BoardCamera()
     camera.scene_size = 960
+    if release_stage in ('structure', 'anime'):
+        key = 'portrait_v2_512' if release_stage == 'structure' else 'portrait_anime'
+        original_runner = camera.trt[key]
+
+        def signal_after_stage(value):
+            result = original_runner(value)
+            if getattr(camera, '_remaining_faces', -1) == 0:
+                camera.on_bpu_chain_done()
+            return result
+
+        camera.trt[key] = signal_after_stage
     events.put(('init', slot))
     while True:
         task = tasks.get()
         if task is None:
             return
-        seq, frame, submitted = task
+        seq, frame, submitted, settings = task
         signaled = False
 
         def ready():
@@ -33,18 +45,27 @@ def render_worker(slot, tasks, events):
 
         camera.on_bpu_chain_done = ready
         try:
-            scale = min(1, 1280 / max(frame.shape[:2]))
-            small = cv2.resize(frame, None, fx=scale, fy=scale) if scale < 1 else frame
+            if settings is None:
+                scale = min(1, 1280 / max(frame.shape[:2]))
+                small = cv2.resize(frame, None, fx=scale, fy=scale) if scale < 1 else frame
+            else:
+                small = prepare_frame(frame, settings)
+                camera.scene_size = max(settings['width'], settings['height'])
             begin = time.perf_counter()
             rgb = camera.render(cv2.cvtColor(small, cv2.COLOR_BGR2RGB))
             processing_ms = (time.perf_counter() - begin) * 1000
-            rgb = cv2.flip(rgb, 1)
+            if settings is not None and (rgb.shape[1], rgb.shape[0]) != (settings['width'], settings['height']):
+                rgb = cv2.resize(rgb, (settings['width'], settings['height']), interpolation=cv2.INTER_CUBIC)
+            if settings is None or settings['mirror']:
+                rgb = cv2.flip(rgb, 1)
             metrics = {
                 'processing_ms': processing_ms,
                 'latency_ms': (time.perf_counter() - submitted) * 1000,
                 'faces': int(camera.last_face_stats.get('refined', 0)),
                 'detected_faces': int(camera.last_face_stats.get('detected', 0)),
                 'capture_sequence': seq,
+                'settings': settings,
+                'release_stage': release_stage,
             }
             ready()
             events.put(('done', slot, seq, rgb, metrics))
@@ -53,12 +74,14 @@ def render_worker(slot, tasks, events):
             events.put(('error', slot, seq, repr(exc)))
 
 
-def run_pipeline(latest, running):
+def run_pipeline(latest, running, release_stage='structure', configuration=None):
     """Yield ordered completed frames; latest() returns (camera_sequence, BGR)."""
     ctx = mp.get_context('spawn')
     events = ctx.Queue(maxsize=8)
     tasks = [ctx.Queue(maxsize=1) for _ in range(2)]
-    workers = [ctx.Process(target=render_worker, args=(i, tasks[i], events), daemon=True) for i in range(2)]
+    if release_stage not in ('parser', 'anime', 'structure', 'ungated'):
+        raise ValueError('Unsupported BPU release stage')
+    workers = [ctx.Process(target=render_worker, args=(i, tasks[i], events, release_stage), daemon=True) for i in range(2)]
     try:
         for worker in workers:
             worker.start()
@@ -89,10 +112,11 @@ def run_pipeline(latest, running):
                 seq, frame = latest()
                 if frame is not None and seq != previous:
                     previous = seq
-                    tasks[next_slot].put((seq, frame, time.perf_counter()))
+                    settings = dict(configuration()) if configuration is not None else None
+                    tasks[next_slot].put((seq, frame, time.perf_counter(), settings))
                     busy.add(next_slot)
                     next_slot = 1 - next_slot
-                    can_submit = False
+                    can_submit = release_stage == 'ungated'
                     progress = time.monotonic()
             try:
                 event = events.get(timeout=.01)

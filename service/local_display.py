@@ -3,6 +3,7 @@ from pathlib import Path
 import sys,threading,time,json,re,subprocess,urllib.request
 from collections import deque
 from resource_monitor import ResourceMonitor,corner_action
+from display_settings import DEFAULT_SETTINGS,load_settings,save_settings,cover_geometry
 ROOT=Path(__file__).resolve().parent
 sys.path.insert(0,str(ROOT/'vendor'))
 import cv2,numpy as np,gi
@@ -11,10 +12,11 @@ gi.require_version('PangoCairo','1.0')
 from gi.repository import Gtk,Gdk,GdkPixbuf,GLib,Pango,PangoCairo
 
 class Player:
- def __init__(self):
+ def __init__(self,start_workers=True):
   self.lock=threading.Lock();self.latest=None;self.sequence=0;self.result=None;self.message='等待 USB 摄像头接入…';self.running=True;self.capture_info={};self.painted=None;self.paint_size=None;self.heartbeat=0
+  self.settings=load_settings(ROOT/'display-settings.json')
   self.window=Gtk.Window(title='S100 实时动漫相机');self.window.set_default_size(1280,720)
-  self.window.connect('destroy',lambda *_:Gtk.main_quit());self.window.connect('key-press-event',self.key)
+  self.window.connect('destroy',self.close);self.window.connect('key-press-event',self.key)
   self.window.connect('window-state-event',self.window_state)
   self.frame_times=deque(maxlen=120);self.resources={};self.panel_visible=False;self.cursor_hidden=False;self.frame_status={}
   self.window.add_events(Gdk.EventMask.POINTER_MOTION_MASK)
@@ -25,26 +27,81 @@ class Player:
   self.box.pack_start(self.image,True,True,0);self.box.pack_end(self.label,False,False,12)
   self.overlay=Gtk.Overlay();self.overlay.add(self.box)
   self.panel=Gtk.EventBox();self.panel.set_halign(Gtk.Align.START);self.panel.set_valign(Gtk.Align.START);self.panel.set_margin_start(18);self.panel.set_margin_top(18)
-  self.info=Gtk.DrawingArea();self.info.set_size_request(480,360);self.info.connect('draw',self.draw_info);self.info_text='';self.panel.add(self.info)
-  panel_css=Gtk.CssProvider();panel_css.load_from_data(b'eventbox {background-color: transparent;border-radius:12px;}')
+  self.panel.connect('draw',self.draw_panel);self.panel.add_events(Gdk.EventMask.POINTER_MOTION_MASK);self.panel.connect('motion-notify-event',self.pointer_motion)
+  self.panel_content=Gtk.Box(orientation=Gtk.Orientation.VERTICAL);self.panel_content.set_name('camera-settings')
+  self.panel_scroll=Gtk.ScrolledWindow();self.panel_scroll.set_policy(Gtk.PolicyType.NEVER,Gtk.PolicyType.AUTOMATIC);self.panel_scroll.set_propagate_natural_height(True);self.panel_scroll.set_max_content_height(650);self.panel_scroll.add(self.panel_content);self.panel.add(self.panel_scroll)
+  self.window.connect('size-allocate',lambda *_:GLib.idle_add(self.resize_panel))
+  self.info=Gtk.DrawingArea();self.info.set_size_request(480,360);self.info.connect('draw',self.draw_info);self.info_text='';self.panel_content.pack_start(self.info,False,False,0)
+  self.build_settings()
+  panel_css=Gtk.CssProvider();panel_css.load_from_data(b'eventbox {background-color: transparent;border-radius:12px;} #camera-settings label {color:white;font-size:17px;} #camera-settings button,#camera-settings entry,#camera-settings spinbutton {background-image:none;background-color:rgba(25,30,40,0.92);color:white;font-size:17px;}')
   self.panel.get_style_context().add_provider(panel_css,Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);self.info.get_style_context().add_provider(panel_css,Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
-  self.info.show();self.panel.set_no_show_all(True);self.overlay.add_overlay(self.panel);self.overlay.set_overlay_pass_through(self.panel,True);self.window.add(self.overlay)
-  self.window.show_all();self.window.fullscreen()
-  threading.Thread(target=self.capture,daemon=True).start();threading.Thread(target=self.process,daemon=True).start();GLib.timeout_add(40,self.paint)
-  threading.Thread(target=self.monitor_resources,daemon=True).start();GLib.timeout_add(500,self.refresh_info)
+  self.panel_content.get_style_context().add_provider(panel_css,Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+  Gtk.StyleContext.add_provider_for_screen(Gdk.Screen.get_default(),panel_css,Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+  self.panel.show_all();self.panel.hide();self.panel.set_no_show_all(True);self.overlay.add_overlay(self.panel);self.overlay.set_overlay_pass_through(self.panel,False);self.window.add(self.overlay)
+  self.window.show_all()
+  if start_workers:
+   self.window.fullscreen()
+   threading.Thread(target=self.capture,daemon=True).start();threading.Thread(target=self.process,daemon=True).start();GLib.timeout_add(40,self.paint)
+   threading.Thread(target=self.monitor_resources,daemon=True).start();GLib.timeout_add(500,self.refresh_info)
  def pointer_motion(self,window,event):
-  state=corner_action(event.x,event.y,self.window.get_allocated_width(),self.window.get_allocated_height(),self.panel_visible,max(480,self.panel.get_allocated_width()+36),max(300,self.panel.get_allocated_height()+36))
+  _,x,y,_=self.window.get_window().get_device_position(event.get_device())
+  state=corner_action(x,y,self.window.get_allocated_width(),self.window.get_allocated_height(),self.panel_visible,max(480,self.panel.get_allocated_width()+36),max(300,self.panel.get_allocated_height()+36))
   self.panel_visible=state['show_panel'];self.panel.set_visible(self.panel_visible)
   if state['hide_cursor']!=self.cursor_hidden:
    self.cursor_hidden=state['hide_cursor'];self.window.get_window().set_cursor(Gdk.Cursor.new_for_display(self.window.get_display(),Gdk.CursorType.BLANK_CURSOR) if self.cursor_hidden else None)
+ def close(self,*_):
+  self.running=False
+  if Gtk.main_level()>0:Gtk.main_quit()
+ def build_settings(self):
+  self.settings_expander=Gtk.Expander(label='画面设置');self.settings_expander.set_margin_start(18);self.settings_expander.set_margin_end(18);self.settings_expander.set_margin_bottom(14)
+  grid=Gtk.Grid(column_spacing=10,row_spacing=10);grid.set_margin_top(12);self.settings_expander.add(grid);self.panel_content.pack_start(self.settings_expander,False,False,0)
+  self.presets=[(640,360),(960,540),(1280,720),(1920,1080),(540,960),(720,1280),(1080,1920)]
+  self.preset=Gtk.ComboBoxText();self.preset.append_text('自定义')
+  for width,height in self.presets:self.preset.append_text(f'{width} × {height}')
+  grid.attach(Gtk.Label(label='输出分辨率',xalign=0),0,0,1,1);grid.attach(self.preset,1,0,3,1)
+  self.output_width=Gtk.SpinButton.new_with_range(320,1920,4);self.output_width.set_numeric(True);self.output_width.set_digits(0)
+  self.output_height=Gtk.SpinButton.new_with_range(240,1920,4);self.output_height.set_numeric(True);self.output_height.set_digits(0)
+  grid.attach(Gtk.Label(label='宽 × 高',xalign=0),0,1,1,1);grid.attach(self.output_width,1,1,1,1);grid.attach(Gtk.Label(label='×'),2,1,1,1);grid.attach(self.output_height,3,1,1,1)
+  self.rotation=Gtk.ComboBoxText()
+  for angle in (0,90,180,270):self.rotation.append_text(f'{angle}°' + (' 顺时针' if angle else ''))
+  grid.attach(Gtk.Label(label='摄像头旋转',xalign=0),0,2,1,1);grid.attach(self.rotation,1,2,3,1)
+  self.mirror=Gtk.CheckButton(label='镜像显示');grid.attach(self.mirror,0,3,4,1)
+  buttons=Gtk.Box(spacing=10);apply=Gtk.Button(label='应用并保存');apply.connect('clicked',self.apply_settings);reset=Gtk.Button(label='恢复默认');reset.connect('clicked',self.reset_settings);buttons.pack_start(apply,True,True,0);buttons.pack_start(reset,True,True,0);grid.attach(buttons,0,4,4,1)
+  self.settings_note=Gtk.Label(label='居中裁剪铺满屏幕；高分辨率会降低帧率。',xalign=0);self.settings_note.set_line_wrap(True);grid.attach(self.settings_note,0,5,4,1)
+  self.preset.connect('changed',self.select_preset);self.sync_settings_controls()
+  self.settings_expander.connect('notify::expanded',lambda *_:GLib.idle_add(self.resize_panel))
+ def resize_panel(self):
+  limit=max(160,self.window.get_allocated_height()-36)
+  if self.panel_scroll.get_min_content_height()>limit:self.panel_scroll.set_min_content_height(0)
+  self.panel_scroll.set_max_content_height(limit)
+  wanted=min(limit,max(40,self.panel_content.get_preferred_height()[1]))
+  if self.panel_scroll.get_min_content_height()!=wanted:self.panel_scroll.set_min_content_height(wanted)
+  return False
+ def select_preset(self,combo):
+  index=combo.get_active()-1
+  if 0<=index<len(self.presets):
+   width,height=self.presets[index];self.output_width.set_value(width);self.output_height.set_value(height)
+ def sync_settings_controls(self):
+  value=self.settings;size=(value['width'],value['height']);self.preset.set_active(self.presets.index(size)+1 if size in self.presets else 0)
+  self.output_width.set_value(value['width']);self.output_height.set_value(value['height']);self.rotation.set_active(value['rotation']//90);self.mirror.set_active(value['mirror'])
+ def apply_settings(self,*_):
+  value={'width':int(round(self.output_width.get_value()/4)*4),'height':int(round(self.output_height.get_value()/4)*4),'rotation':self.rotation.get_active()*90,'mirror':self.mirror.get_active()}
+  try:
+   self.settings=save_settings(ROOT/'display-settings.json',value);self.sync_settings_controls();self.settings_note.set_text('已保存，下一批新画面生效；居中裁剪铺满屏幕。')
+  except (ValueError,OSError) as error:self.settings_note.set_text('设置未保存：'+str(error))
+ def reset_settings(self,*_):
+  self.settings=dict(DEFAULT_SETTINGS);self.sync_settings_controls();self.apply_settings()
  def monitor_resources(self):
-  monitor=ResourceMonitor()
+  monitor=ResourceMonitor();history=deque(maxlen=5)
   while self.running:
-   self.resources=monitor.sample();time.sleep(1)
+   sample=monitor.sample();history.append(sample.get('bpu_percent',{}));keys=sample.get('bpu_percent',{})
+   sample['bpu_average_percent']={key:sum(row[key] for row in history if key in row)/sum(key in row for row in history) for key in keys}
+   self.resources=sample;time.sleep(1)
  def refresh_info(self):
   r=self.resources;s=self.frame_status;out=s.get('output',[]);fps=s.get('fps',0)
   lines=['实时信息 · S100 BPU',f'输出  {out[0]} × {out[1]}   |   {fps:.1f} FPS' if out else '输出  等待画面',f"采集  {int(self.capture_info.get('width',0))} × {int(self.capture_info.get('height',0))}",f"CPU  {r['cpu_percent']:.1f}%" if 'cpu_percent' in r else 'CPU  采样中']
-  lines.append('BPU  '+' / '.join(f'{k}: {v:.0f}%' for k,v in r.get('bpu_percent',{}).items()) if r.get('bpu_percent') else 'BPU  暂无读数')
+  lines.insert(2,f'显示  {self.image.get_allocated_width()} × {self.image.get_allocated_height()} · 铺满裁剪')
+  lines.append('BPU  '+' / '.join(f"{v:.0f}% · 近5秒均值 {r.get('bpu_average_percent',{}).get(k,v):.0f}%" for k,v in r.get('bpu_percent',{}).items()) if r.get('bpu_percent') else 'BPU  暂无读数')
   if 'bpu_frequency_mhz' in r:lines.append(f"BPU 频率  {r['bpu_frequency_mhz']:.0f} MHz")
   if 'processing_ms' in s:lines.append(f"模型与后处理  {s['processing_ms']:.0f} ms")
   if 'latency_ms' in s:lines.append(f"单帧处理总耗时  {s['latency_ms']:.0f} ms")
@@ -54,20 +111,26 @@ class Player:
   if soc:lines.append(f'SoC 温度  {max(soc):.1f} °C')
   if bpu:lines.append(f'BPU 温度  {max(bpu):.1f} °C')
   self.info_text='\n'.join(lines);self.info.set_size_request(480,24+27*len(lines));self.info.queue_draw()
+  self.resize_panel()
   (ROOT/'local-display-resources.json').write_text(json.dumps({'resources':r,'frame':s,'panel_visible':self.panel_visible,'cursor_hidden':self.cursor_hidden,'panel_text':'\n'.join(lines)},ensure_ascii=False,indent=2))
   return True
  def key(self,window,event):
+  focus=self.window.get_focus()
   if event.keyval==Gdk.KEY_Escape:self.window.unfullscreen()
-  elif event.keyval in (Gdk.KEY_F11,Gdk.KEY_f):self.window.fullscreen()
+  elif event.keyval==Gdk.KEY_F11 or (event.keyval==Gdk.KEY_f and not isinstance(focus,Gtk.Entry)):self.window.fullscreen()
  def draw_frame(self,widget,context):
   if self.pixbuf is None:return False
-  width=widget.get_allocated_width();height=widget.get_allocated_height();w=self.pixbuf.get_width();h=self.pixbuf.get_height();scale=min(width/w,height/h)
-  context.save();context.translate((width-w*scale)/2,(height-h*scale)/2);context.scale(scale,scale)
+  width=widget.get_allocated_width();height=widget.get_allocated_height();w=self.pixbuf.get_width();h=self.pixbuf.get_height()
+  if min(width,height,w,h)<=0:return False
+  left,top,scale=cover_geometry(width,height,w,h)
+  context.save();context.rectangle(0,0,width,height);context.clip();context.translate(left,top);context.scale(scale,scale)
   Gdk.cairo_set_source_pixbuf(context,self.pixbuf,0,0);context.paint();context.restore()
   return False
- def draw_info(self,widget,context):
+ def draw_panel(self,widget,context):
   context.save();context.set_source_rgba(0,0,0,0.45)
   context.rectangle(0,0,widget.get_allocated_width(),widget.get_allocated_height());context.fill();context.restore()
+  return False
+ def draw_info(self,widget,context):
   font=Pango.FontDescription('Sans');font.set_absolute_size(19*Pango.SCALE)
   line_layout=PangoCairo.create_layout(context);line_layout.set_font_description(font)
   context.set_source_rgb(1,1,1)
@@ -116,17 +179,19 @@ class Player:
    self.message='摄像头已断开，等待重新连接…';time.sleep(1)
  def process(self):
   from inference_pipeline import run_pipeline
-  count=0
+  count=0;last_settings=None
   def latest():
    with self.lock:return self.sequence,self.latest
   while self.running:
    try:
-    for output,metrics in run_pipeline(latest,lambda:self.running):
+    for output,metrics in run_pipeline(latest,lambda:self.running,configuration=lambda:self.settings):
+     if metrics['settings']!=self.settings:continue
+     if metrics['settings']!=last_settings:self.frame_times.clear();last_settings=metrics['settings']
      self.result=output;count+=1
      now=time.monotonic();self.frame_times.append(now)
      while len(self.frame_times)>2 and self.frame_times[0]<now-3:self.frame_times.popleft()
      fps=(len(self.frame_times)-1)/(now-self.frame_times[0]) if len(self.frame_times)>1 else 1000/max(metrics['latency_ms'],1)
-     self.message='';status={'frames':count,'fps':fps,'fps_window_seconds':3,'capture':self.capture_info,'output':[output.shape[1],output.shape[0]],'mirror':True,'backend':'S100 BPU','pipeline':'two-process-gated'}
+     self.message='';status={'frames':count,'fps':fps,'fps_window_seconds':3,'capture':self.capture_info,'output':[output.shape[1],output.shape[0]],'mirror':self.settings['mirror'],'display_mode':'cover','backend':'S100 BPU','pipeline':'two-process-gated'}
      status.update(metrics);self.frame_status=status
      if count%10==1:
       (ROOT/'local-display-status.json').write_text(json.dumps(status,indent=2));print('DISPLAY',json.dumps(status),flush=True)
