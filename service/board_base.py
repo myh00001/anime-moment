@@ -2,6 +2,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 from face_tracking import FaceContinuity
+from native_math import sharpen_exact
 ROOT=Path(__file__).resolve().parent
 class AnimeCamera:
 
@@ -96,13 +97,7 @@ class AnimeCamera:
                 self.last_face_stats['refined'] += 1
         floating = out.astype(np.float32)
         detail = cv2.GaussianBlur(floating, (0, 0), 0.75)
-        np.subtract(floating, detail, out=detail)
-        np.multiply(floating, 0.98, out=floating)
-        np.add(floating, 4, out=floating)
-        np.multiply(detail, 0.22, out=detail)
-        np.add(floating, detail, out=floating)
-        np.clip(floating, 0, 255, out=floating)
-        out = floating.astype(np.uint8)
+        out = sharpen_exact(floating, detail)
         if self.use_temporal and self.previous_source is not None and (self.previous_source.shape == source.shape):
             change = np.max(np.abs(source.astype(np.float32) - self.previous_source.astype(np.float32)), axis=2)
             change = cv2.dilate(change, np.ones((7, 7), np.uint8))

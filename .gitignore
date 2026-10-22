@@ -28,3 +28,4 @@ captures/
 *.key
 *.zip
 *.tar.gz
+*.so

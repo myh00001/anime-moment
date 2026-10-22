@@ -23,7 +23,7 @@ def main():
     parser.add_argument('--frames', type=int, default=96)
     parser.add_argument('--warmup', type=int, default=8)
     parser.add_argument('--release-stage', default='structure',
-                        choices=['structure', 'anime', 'parser', 'ungated'])
+                        choices=['structure', 'anime', 'parser', 'scene', 'ungated'])
     parser.add_argument('--max-pixel-error', type=int, default=0)
     parser.add_argument('--report', type=Path, required=True)
     args = parser.parse_args()

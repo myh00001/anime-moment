@@ -15,6 +15,8 @@
 
 ## 实测性能
 
+最新1920×1080对照：精确原生CPU运算配合场景阶段调度，四组144帧交替复测由平均2.587提高到2.759 FPS（约6.7%），延迟713.5→702.4ms；画面逐像素一致。以下960×540为此前历史结果，不能与1080p直接比较。完整数值见[性能说明](docs/performance.md)。
+
 RDK S100、系统 4.0.4-Beta、HBRT 4.2.11，输出 960×540，2026-10-22：
 
 |场景|此前|当前|
@@ -48,10 +50,14 @@ cd s100-anime-camera
 python3 scripts/import_models.py /path/to/model-files
 bash scripts/install_dependencies.sh
 python3 scripts/check_environment.py
+# 可选：已安装C编译器和OpenMP运行库时启用精确CPU优化
+bash scripts/build_native.sh
 python3 service/local_display.py
 ```
 
 `install_dependencies.sh` 使用 apt 安装图形依赖，用系统 Python 将 Python 包装入 `service/vendor/`，不会安装或替换板卡固件、HBRT 或 Windows/WSL 工具链。
+
+原生库需在目标板上编译；不随Git发布二进制。缺少原生库时自动使用相同画质的NumPy/OpenCV路径与原结构阶段调度，仍可运行。编译不会修改模型。
 
 可选安装自启动与桌面图标：
 

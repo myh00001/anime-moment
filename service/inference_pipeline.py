@@ -1,6 +1,7 @@
 """Two independent Python interpreters, at most two fresh frames in flight.
 
-The next latest frame starts after the previous last-face structure stage.
+The native CPU path releases the next frame after scene inference; the
+portable path retains the last-face structure gate.
 This fills inter-model CPU gaps without unbounded BPU task accumulation.
 """
 import multiprocessing as mp
@@ -18,13 +19,13 @@ def render_worker(slot, tasks, events, release_stage='structure'):
     from display_settings import DEFAULT_SETTINGS, prepare_frame, output_dimensions
     camera = BoardCamera()
     camera.scene_size = max(DEFAULT_SETTINGS['width'],DEFAULT_SETTINGS['height'])
-    if release_stage in ('structure', 'anime'):
-        key = 'portrait_v2_512' if release_stage == 'structure' else 'portrait_anime'
+    if release_stage in ('structure', 'anime', 'scene'):
+        key = {'structure': 'portrait_v2_512', 'anime': 'portrait_anime', 'scene': 'scene'}[release_stage]
         original_runner = camera.trt[key]
 
         def signal_after_stage(value):
             result = original_runner(value)
-            if getattr(camera, '_remaining_faces', -1) == 0:
+            if release_stage == 'scene' or getattr(camera, '_remaining_faces', -1) == 0:
                 camera.on_bpu_chain_done()
             return result
 
@@ -76,12 +77,15 @@ def render_worker(slot, tasks, events, release_stage='structure'):
             events.put(('error', slot, seq, repr(exc)))
 
 
-def run_pipeline(latest, running, release_stage='structure', configuration=None):
+def run_pipeline(latest, running, release_stage=None, configuration=None):
     """Yield ordered completed frames; latest() returns (camera_sequence, BGR)."""
+    if release_stage is None:
+        from native_math import AVAILABLE
+        release_stage = 'scene' if AVAILABLE else 'structure'
     ctx = mp.get_context('spawn')
     events = ctx.Queue(maxsize=8)
     tasks = [ctx.Queue(maxsize=1) for _ in range(2)]
-    if release_stage not in ('parser', 'anime', 'structure', 'ungated'):
+    if release_stage not in ('parser', 'anime', 'structure', 'scene', 'ungated'):
         raise ValueError('Unsupported BPU release stage')
     workers = [ctx.Process(target=render_worker, args=(i, tasks[i], events, release_stage), daemon=True) for i in range(2)]
     try:

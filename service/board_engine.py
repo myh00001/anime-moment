@@ -1,4 +1,5 @@
 import concurrent.futures
+from native_math import quarter_blend_exact
 import cv2
 import numpy as np
 from board_base import AnimeCamera,ROOT
@@ -224,7 +225,7 @@ class BoardCamera(AnimeCamera):
         light_channel = lab[:, :, 0].copy()
         # Quarter weights are exact in binary. CV_32F preserves the original
         # float result; cast afterwards to truncate, rather than rounding to u8.
-        lab = cv2.addWeighted(lab, 0.25, original, 0.75, 0, dtype=cv2.CV_32F).astype(np.uint8)
+        lab = quarter_blend_exact(lab, original)
         histogram = cv2.calcHist([light_channel], [0], None, [256], [0, 256]).ravel().astype(np.int64)
         cdf = histogram.cumsum()
         indices = (light_channel.size - 1) * np.array([0.02, 0.98])
