@@ -1,3 +1,4 @@
+import concurrent.futures
 import cv2
 import numpy as np
 from board_base import AnimeCamera,ROOT
@@ -29,6 +30,7 @@ class BoardCamera(AnimeCamera):
 
     def __init__(self):
         super().__init__()
+        self._source_pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
         cv2.setNumThreads(6)
         self.scene_size = max(DEFAULT_SETTINGS['width'],DEFAULT_SETTINGS['height'])
         self.face_detail_fallbacks = self.stable_faces = 0
@@ -189,17 +191,36 @@ class BoardCamera(AnimeCamera):
         self.last_face_stats['backend'] = 'S100 BPU'
         return generated, self.current_face_coverage
 
+    @staticmethod
+    def prepare_source_lab(rgb, size):
+        source = cv2.resize(rgb, size, interpolation=cv2.INTER_AREA)
+        source = cv2.bilateralFilter(source, 5, 24, 4)
+        return cv2.cvtColor(source, cv2.COLOR_RGB2LAB)
+
     def render(self, rgb):
-        generated, coverage = self.render_partial(rgb)
-        return self.finish_render(rgb, generated, coverage)
+        h, w = rgb.shape[:2]
+        size = (max(32, round(w * self.scene_size / max(w, h) / 4) * 4),
+                max(32, round(h * self.scene_size / max(w, h) / 4) * 4))
+        future = self._source_pool.submit(self.prepare_source_lab, rgb, size)
+        try:
+            generated, coverage = self.render_partial(rgb)
+            source_lab = future.result()
+        except BaseException:
+            future.result()
+            raise
+        if source_lab.shape[:2] != generated.shape[:2]:
+            raise RuntimeError('Prefetched source size differs from generated size')
+        return self.finish_render(rgb, generated, coverage, source_lab)
 
     @staticmethod
-    def finish_render(rgb, generated, coverage):
+    def finish_render(rgb, generated, coverage, source_lab=None):
         h, w = generated.shape[:2]
-        source = cv2.resize(rgb, (w, h), interpolation=cv2.INTER_AREA)
-        source = cv2.bilateralFilter(source, 5, 24, 4)
+        if source_lab is None:
+            source = cv2.resize(rgb, (w, h), interpolation=cv2.INTER_AREA)
+            source = cv2.bilateralFilter(source, 5, 24, 4)
+            source_lab = cv2.cvtColor(source, cv2.COLOR_RGB2LAB)
         lab = cv2.cvtColor(generated, cv2.COLOR_RGB2LAB)
-        original = cv2.cvtColor(source, cv2.COLOR_RGB2LAB)
+        original = source_lab
         light_channel = lab[:, :, 0].copy()
         # Quarter weights are exact in binary. CV_32F preserves the original
         # float result; cast afterwards to truncate, rather than rounding to u8.
