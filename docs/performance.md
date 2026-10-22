@@ -166,3 +166,8 @@ v4l2-ctl -d /dev/video0 --list-formats-ext
 部署后无人现场输出约7.9～8.5FPS，不能视为有人脸的帧率。确认1920×1080、全屏、镜像、场景阶段放行，无近期推理错误；手动关闭后保持关闭、自启动仍启用。当前BPU采样不足以证明持续满载。
 
 运行 `bash scripts/build_native.sh` 在目标Linux设备编译可选库。构建使用临时文件再重命名，避免覆盖正在映射的库；更新后需要重新启动程序。没有库时回退原算术与结构阶段门控。算术测试覆盖百万随机float32值、奇数长度、并行阈值及所有uint8合成输入对。数值记录见 [benchmarks/2026-10-23-native.json](benchmarks/2026-10-23-native.json)。
+
+
+### 原生路径线程配比复测（保留现有配置）
+
+每组64帧，OpenMP 2线程时，OpenCV 5～8线程均约2.76FPS，未发现稳定吞吐收益；3线程降至2.23FPS、4线程约2.53FPS。OpenMP 3线程也未带来收益，其中OpenCV 6线程组合退化到2.21FPS。所有结果逐像素一致，保留已部署的OpenCV 6线程与OpenMP 2线程。数值见 [线程配比记录](benchmarks/2026-10-23-thread-matrix.json)。
