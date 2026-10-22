@@ -8,10 +8,12 @@ DEFAULT_SETTINGS = {'width': 960, 'height': 540, 'rotation': 0, 'mirror': True}
 
 def validate_settings(values):
     result = dict(DEFAULT_SETTINGS, **values)
-    for key, minimum in [('width', 320), ('height', 240)]:
+    for key, minimum in [('width', 4), ('height', 4)]:
         value = result[key]
         if type(value) is not int or not minimum <= value <= 1920 or value % 4:
             raise ValueError(f'{key} must be a multiple of four between {minimum} and 1920')
+    if max(result['width'],result['height']) < 320:
+        raise ValueError('Output long edge must be at least 320')
     if type(result['rotation']) is not int or result['rotation'] not in (0, 90, 180, 270):
         raise ValueError('rotation must be 0, 90, 180 or 270')
     if type(result['mirror']) is not bool:
@@ -45,20 +47,19 @@ def cover_geometry(width, height, image_width, image_height):
     return (width - image_width * scale) / 2, (height - image_height * scale) / 2, scale
 
 
+def output_dimensions(width, height, long_edge):
+    if min(width, height, long_edge) <= 0:
+        raise ValueError('Output dimensions must be positive')
+    scale = long_edge / max(width, height)
+    return max(4, round(width * scale / 4) * 4), max(4, round(height * scale / 4) * 4)
+
+
 def prepare_frame(frame, settings):
     import cv2
     rotation = settings['rotation']
     if rotation:
         frame = cv2.rotate(frame, {90: cv2.ROTATE_90_CLOCKWISE, 180: cv2.ROTATE_180, 270: cv2.ROTATE_90_COUNTERCLOCKWISE}[rotation])
-    height, width = frame.shape[:2]
-    desired_width, desired_height = settings['width'], settings['height']
-    if width * desired_height > height * desired_width:
-        crop_width = max(1, round(height * desired_width / desired_height))
-        left = (width - crop_width) // 2
-        frame = frame[:, left:left + crop_width]
-    elif width * desired_height < height * desired_width:
-        crop_height = max(1, round(width * desired_height / desired_width))
-        top = (height - crop_height) // 2
-        frame = frame[top:top + crop_height]
+    # Resolution changes pixel density only. Crop once at display time, using
+    # the window aspect, rather than cropping source and then cropping again.
     scale = min(1, 1280 / max(frame.shape[:2]))
     return cv2.resize(frame, None, fx=scale, fy=scale) if scale < 1 else frame

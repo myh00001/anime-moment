@@ -5,10 +5,23 @@ import tempfile
 import unittest
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'service'))
-from display_settings import DEFAULT_SETTINGS,cover_geometry,load_settings,save_settings,validate_settings
+from display_settings import DEFAULT_SETTINGS,cover_geometry,load_settings,save_settings,validate_settings,output_dimensions
 
 
 class DisplaySettingsTests(unittest.TestCase):
+    def test_resolution_keeps_source_field_of_view(self):
+        for width,height in [(1920,1080),(1080,1920),(1600,1200)]:
+            for edge in [640,960,1280,1920]:
+                out_width,out_height=output_dimensions(width,height,edge)
+                self.assertEqual(max(out_width,out_height),edge)
+                self.assertAlmostEqual(out_width/out_height,width/height,delta=.01)
+                # The same normalized source coordinates remain visible after
+                # display cover regardless of the output pixel count.
+                x,y,scale=cover_geometry(1080,1920,out_width,out_height)
+                visible_fraction_x=1080/(out_width*scale)
+                expected=min(1,(1080/1920)/(width/height))
+                self.assertAlmostEqual(visible_fraction_x,expected,delta=.002)
+
     def test_cover_landscape_and_portrait_without_borders(self):
         for screen in [(1920,1080),(1080,1920),(1024,768),(540,960),(3840,1080)]:
             x,y,scale=cover_geometry(*screen,960,540)

@@ -3,7 +3,7 @@ from pathlib import Path
 import sys,threading,time,json,re,subprocess,urllib.request
 from collections import deque
 from resource_monitor import ResourceMonitor,corner_action
-from display_settings import DEFAULT_SETTINGS,load_settings,save_settings,cover_geometry
+from display_settings import DEFAULT_SETTINGS,load_settings,save_settings,cover_geometry,output_dimensions
 ROOT=Path(__file__).resolve().parent
 sys.path.insert(0,str(ROOT/'vendor'))
 import cv2,numpy as np,gi
@@ -55,19 +55,18 @@ class Player:
  def build_settings(self):
   self.settings_expander=Gtk.Expander(label='画面设置');self.settings_expander.set_margin_start(18);self.settings_expander.set_margin_end(18);self.settings_expander.set_margin_bottom(14)
   grid=Gtk.Grid(column_spacing=10,row_spacing=10);grid.set_margin_top(12);self.settings_expander.add(grid);self.panel_content.pack_start(self.settings_expander,False,False,0)
-  self.presets=[(640,360),(960,540),(1280,720),(1920,1080),(540,960),(720,1280),(1080,1920)]
+  self.presets=[640,960,1280,1920]
   self.preset=Gtk.ComboBoxText();self.preset.append_text('自定义')
-  for width,height in self.presets:self.preset.append_text(f'{width} × {height}')
+  for edge in self.presets:self.preset.append_text(f'长边 {edge} 像素')
   grid.attach(Gtk.Label(label='输出分辨率',xalign=0),0,0,1,1);grid.attach(self.preset,1,0,3,1)
   self.output_width=Gtk.SpinButton.new_with_range(320,1920,4);self.output_width.set_numeric(True);self.output_width.set_digits(0)
-  self.output_height=Gtk.SpinButton.new_with_range(240,1920,4);self.output_height.set_numeric(True);self.output_height.set_digits(0)
-  grid.attach(Gtk.Label(label='宽 × 高',xalign=0),0,1,1,1);grid.attach(self.output_width,1,1,1,1);grid.attach(Gtk.Label(label='×'),2,1,1,1);grid.attach(self.output_height,3,1,1,1)
+  grid.attach(Gtk.Label(label='输出长边',xalign=0),0,1,1,1);grid.attach(self.output_width,1,1,1,1);grid.attach(Gtk.Label(label='宽高自动匹配'),2,1,2,1)
   self.rotation=Gtk.ComboBoxText()
   for angle in (0,90,180,270):self.rotation.append_text(f'{angle}°' + (' 顺时针' if angle else ''))
   grid.attach(Gtk.Label(label='摄像头旋转',xalign=0),0,2,1,1);grid.attach(self.rotation,1,2,3,1)
   self.mirror=Gtk.CheckButton(label='镜像显示');grid.attach(self.mirror,0,3,4,1)
   buttons=Gtk.Box(spacing=10);apply=Gtk.Button(label='应用并保存');apply.connect('clicked',self.apply_settings);reset=Gtk.Button(label='恢复默认');reset.connect('clicked',self.reset_settings);buttons.pack_start(apply,True,True,0);buttons.pack_start(reset,True,True,0);grid.attach(buttons,0,4,4,1)
-  self.settings_note=Gtk.Label(label='居中裁剪铺满屏幕；高分辨率会降低帧率。',xalign=0);self.settings_note.set_line_wrap(True);grid.attach(self.settings_note,0,5,4,1)
+  self.settings_note=Gtk.Label(label='分辨率只改变像素密度，取景比例保持不变。',xalign=0);self.settings_note.set_line_wrap(True);grid.attach(self.settings_note,0,5,4,1)
   self.preset.connect('changed',self.select_preset);self.sync_settings_controls()
   self.settings_expander.connect('notify::expanded',lambda *_:GLib.idle_add(self.resize_panel))
  def resize_panel(self):
@@ -80,14 +79,18 @@ class Player:
  def select_preset(self,combo):
   index=combo.get_active()-1
   if 0<=index<len(self.presets):
-   width,height=self.presets[index];self.output_width.set_value(width);self.output_height.set_value(height)
+   self.output_width.set_value(self.presets[index])
  def sync_settings_controls(self):
-  value=self.settings;size=(value['width'],value['height']);self.preset.set_active(self.presets.index(size)+1 if size in self.presets else 0)
-  self.output_width.set_value(value['width']);self.output_height.set_value(value['height']);self.rotation.set_active(value['rotation']//90);self.mirror.set_active(value['mirror'])
+  value=self.settings;edge=max(value['width'],value['height']);self.preset.set_active(self.presets.index(edge)+1 if edge in self.presets else 0)
+  self.output_width.set_value(edge);self.rotation.set_active(value['rotation']//90);self.mirror.set_active(value['mirror'])
  def apply_settings(self,*_):
-  value={'width':int(round(self.output_width.get_value()/4)*4),'height':int(round(self.output_height.get_value()/4)*4),'rotation':self.rotation.get_active()*90,'mirror':self.mirror.get_active()}
+  rotation=self.rotation.get_active()*90;edge=int(round(self.output_width.get_value()/4)*4)
+  width=int(self.capture_info.get('width') or 1920);height=int(self.capture_info.get('height') or 1080)
+  if rotation in (90,270):width,height=height,width
+  width,height=output_dimensions(width,height,edge)
+  value={'width':width,'height':height,'rotation':rotation,'mirror':self.mirror.get_active()}
   try:
-   self.settings=save_settings(ROOT/'display-settings.json',value);self.sync_settings_controls();self.settings_note.set_text('已保存，下一批新画面生效；居中裁剪铺满屏幕。')
+   self.settings=save_settings(ROOT/'display-settings.json',value);self.sync_settings_controls();self.settings_note.set_text(f'已保存：{width} × {height}，保持原取景比例。')
   except (ValueError,OSError) as error:self.settings_note.set_text('设置未保存：'+str(error))
  def reset_settings(self,*_):
   self.settings=dict(DEFAULT_SETTINGS);self.sync_settings_controls();self.apply_settings()

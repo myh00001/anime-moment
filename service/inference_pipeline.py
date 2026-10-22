@@ -15,7 +15,7 @@ def render_worker(slot, tasks, events, release_stage='structure'):
     sys.path.insert(0, str(root / 'vendor'))
     import cv2
     from board_engine import BoardCamera
-    from display_settings import prepare_frame
+    from display_settings import prepare_frame, output_dimensions
     camera = BoardCamera()
     camera.scene_size = 960
     if release_stage in ('structure', 'anime'):
@@ -54,8 +54,10 @@ def render_worker(slot, tasks, events, release_stage='structure'):
             begin = time.perf_counter()
             rgb = camera.render(cv2.cvtColor(small, cv2.COLOR_BGR2RGB))
             processing_ms = (time.perf_counter() - begin) * 1000
-            if settings is not None and (rgb.shape[1], rgb.shape[0]) != (settings['width'], settings['height']):
-                rgb = cv2.resize(rgb, (settings['width'], settings['height']), interpolation=cv2.INTER_CUBIC)
+            if settings is not None:
+                size = output_dimensions(small.shape[1], small.shape[0], max(settings['width'], settings['height']))
+                if (rgb.shape[1], rgb.shape[0]) != size:
+                    rgb = cv2.resize(rgb, size, interpolation=cv2.INTER_CUBIC)
             if settings is None or settings['mirror']:
                 rgb = cv2.flip(rgb, 1)
             metrics = {
