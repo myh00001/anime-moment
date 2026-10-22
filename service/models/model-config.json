@@ -1,0 +1,6 @@
+{
+  "scene_640": {"output_tanh": false},
+  "portrait_structure_512": {"output_tanh": false},
+  "portrait_anime_512": {"output_tanh": false},
+  "head_parse_512": {"output_tanh": false}
+}

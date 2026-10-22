@@ -1,0 +1,29 @@
+name: Source checks
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Compile Python sources
+        run: python -m compileall -q service scripts
+      - name: Validate shell scripts
+        run: bash -n scripts/install_dependencies.sh service/start.sh
+      - name: Validate model metadata
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          manifest = json.loads(Path('models-manifest.json').read_text())
+          assert len(manifest['models']) == 5
+          for model in manifest['models']:
+              assert len(model['sha256']) == 64
+              assert model['bytes'] > 0
+          config = json.loads(Path('service/models/model-config.json').read_text())
+          assert all(not model['output_tanh'] for model in config.values())
+          PY
