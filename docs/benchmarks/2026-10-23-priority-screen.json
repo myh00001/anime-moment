@@ -1,0 +1,70 @@
+{
+  "frames_per_case": 128,
+  "deployed": false,
+  "results": [
+    {
+      "variant": "baseline-A",
+      "fps": 2.6829284214728157,
+      "latency_ms": 728.4111198415909,
+      "bpu_mean_percent": 84.39080459770115,
+      "max_pixel_error": 0,
+      "mae": 0.0
+    },
+    {
+      "variant": "scene-A",
+      "fps": 2.755332077242263,
+      "latency_ms": 703.544980683273,
+      "bpu_mean_percent": 77.42857142857143,
+      "max_pixel_error": 0,
+      "mae": 0.0
+    },
+    {
+      "variant": "portrait-A",
+      "fps": 2.7539338444188726,
+      "latency_ms": 705.777662283208,
+      "bpu_mean_percent": 84.33333333333333,
+      "max_pixel_error": 0,
+      "mae": 0.0
+    },
+    {
+      "variant": "parser-A",
+      "fps": 2.75282266421581,
+      "latency_ms": 704.2850412749127,
+      "bpu_mean_percent": 77.47619047619048,
+      "max_pixel_error": 0,
+      "mae": 0.0
+    },
+    {
+      "variant": "parser-B",
+      "fps": 2.753998601085203,
+      "latency_ms": 709.2169788166757,
+      "bpu_mean_percent": 84.76470588235294,
+      "max_pixel_error": 0,
+      "mae": 0.0
+    },
+    {
+      "variant": "portrait-B",
+      "fps": 2.7402642797155075,
+      "latency_ms": 712.9683889666467,
+      "bpu_mean_percent": 87.28235294117647,
+      "max_pixel_error": 0,
+      "mae": 0.0
+    },
+    {
+      "variant": "scene-B",
+      "fps": 2.6617624063843857,
+      "latency_ms": 733.3890637665567,
+      "bpu_mean_percent": 83.27272727272727,
+      "max_pixel_error": 0,
+      "mae": 0.0
+    },
+    {
+      "variant": "baseline-B",
+      "fps": 2.7061625189449834,
+      "latency_ms": 721.4547743334,
+      "bpu_mean_percent": 83.15116279069767,
+      "max_pixel_error": 0,
+      "mae": 0.0
+    }
+  ]
+}
