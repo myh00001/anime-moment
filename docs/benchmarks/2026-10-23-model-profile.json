@@ -1,0 +1,77 @@
+{
+  "python_runtime": {
+    "scene": {
+      "calls": 20,
+      "prepare_ms": 0.006982499998642311,
+      "runtime_ms": 36.18393531249886,
+      "copy_ms": 2.9161692500050407,
+      "output_bytes": 2764800,
+      "output_shapes": [
+        [
+          1,
+          360,
+          640,
+          3
+        ]
+      ]
+    },
+    "portrait_v2_512": {
+      "calls": 20,
+      "prepare_ms": 0.5930791249983969,
+      "runtime_ms": 243.53372112500082,
+      "copy_ms": 0.3003713749993864,
+      "output_bytes": 3145728,
+      "output_shapes": [
+        [
+          1,
+          3,
+          512,
+          512
+        ]
+      ]
+    },
+    "portrait_anime": {
+      "calls": 20,
+      "prepare_ms": 2.1499613749984547,
+      "runtime_ms": 14.143260874996955,
+      "copy_ms": 2.532796187503905,
+      "output_bytes": 3145728,
+      "output_shapes": [
+        [
+          1,
+          512,
+          512,
+          3
+        ]
+      ]
+    },
+    "parser": {
+      "calls": 20,
+      "prepare_ms": 0.5899866874976567,
+      "runtime_ms": 64.97578668750315,
+      "copy_ms": 0.12458350000343899,
+      "output_bytes": 1048576,
+      "output_shapes": [
+        [
+          1,
+          512,
+          512
+        ]
+      ]
+    }
+  },
+  "hrt_profiles": {
+    "portrait_structure_512": {
+      "profiler.csv": "ucp_version,3.7.3_(4.2.11 HBRT)\nrunning_condition\nthread_num,1\ncore_id,\"0\"\nframe_count,10\nrun_time,2430.669921875\nmodel_name,\"portrait_structure_512_mixed_conv8\"\n\nperf_result\naverage_latency,242.94839477539063\nFPS,4.114469528198242\n\nprocessor_latency, avg_time, max_time, min_time\nBPU_inference_time_cost,242.93927272727274,243.719,242.744,\nCPU_inference_time_cost,0.0,0.0,0.0,\n\ntask_latency, avg_time, max_time, min_time\nTaskRunningTime,243.0038181818182,243.864,242.799,\n\nmodel nodes, avg_time, max_time, min_time\n\"Node-0-BPU-image_HzCalibration_id_1_bpu_segment_0\"\n\"Stage1-GenerateBpuTask\",0.11345454545454545,0.225,0.099\n\"Stage2-BpuCoreProcess\",242.73945454545455,242.899,242.611\n\"Total\",242.93927272727274,243.719,242.744\n"
+    },
+    "head_parse_512": {
+      "profiler.csv": "ucp_version,3.7.3_(4.2.11 HBRT)\nrunning_condition\nthread_num,1\ncore_id,\"0\"\nframe_count,10\nrun_time,645.7509765625\nmodel_name,\"head_parse_512_reflect\"\n\nperf_result\naverage_latency,64.49879455566406\nFPS,15.49013900756836\n\nprocessor_latency, avg_time, max_time, min_time\nBPU_inference_time_cost,64.17181818181818,64.505,64.074,\nCPU_inference_time_cost,0.2713636363636364,0.327,0.217,\n\ntask_latency, avg_time, max_time, min_time\nTaskRunningTime,64.51590909090909,64.977,64.398,\n\nmodel nodes, avg_time, max_time, min_time\n\"Node-0-BPU-input_HzCalibration_id_1_bpu_segment_0\"\n\"Stage1-GenerateBpuTask\",0.102,0.209,0.079\n\"Stage2-BpuCoreProcess\",64.03590909090909,64.122,63.98\n\"Total\",64.17181818181818,64.505,64.074\n\"Node-1-native::Cast-ArgMax_0_id_952_cpu_segment_1\",0.2655454545454546,0.318,0.213\n\"Node-2-native::View-ArgMax_0_id_952_cpu_segment_2\",0.005818181818181819,0.009,0.004\n"
+    },
+    "scene_640": {
+      "profiler.csv": "ucp_version,3.7.3_(4.2.11 HBRT)\nrunning_condition\nthread_num,1\ncore_id,\"0\"\nframe_count,10\nrun_time,334.3399963378906\nmodel_name,\"scene_640_pooled\"\n\nperf_result\naverage_latency,33.32170104980469\nFPS,29.92730712890625\n\nprocessor_latency, avg_time, max_time, min_time\nBPU_inference_time_cost,33.30054545454546,33.801,32.936,\nCPU_inference_time_cost,0.0,0.0,0.0,\n\ntask_latency, avg_time, max_time, min_time\nTaskRunningTime,33.357181818181814,33.963,32.985,\n\nmodel nodes, avg_time, max_time, min_time\n\"Node-0-BPU-AnimeGANv3_input:0_HzCalibration_id_1_bpu_segment_0\"\n\"Stage1-GenerateBpuTask\",0.101,0.272,0.07\n\"Stage2-BpuCoreProcess\",33.17518181818182,33.452,32.841\n\"Total\",33.30054545454546,33.801,32.936\n"
+    },
+    "portrait_anime_512": {
+      "profiler.csv": "ucp_version,3.7.3_(4.2.11 HBRT)\nrunning_condition\nthread_num,1\ncore_id,\"0\"\nframe_count,10\nrun_time,110.62899780273438\nmodel_name,\"portrait_anime_512_pooled\"\n\nperf_result\naverage_latency,10.952899932861328\nFPS,90.54608154296875\n\nprocessor_latency, avg_time, max_time, min_time\nBPU_inference_time_cost,10.948545454545455,11.563,10.757,\nCPU_inference_time_cost,0.0,0.0,0.0,\n\ntask_latency, avg_time, max_time, min_time\nTaskRunningTime,11.002454545454546,11.715,10.793,\n\nmodel nodes, avg_time, max_time, min_time\n\"Node-0-BPU-AnimeGANv3_input:0_HzCalibration_id_1_bpu_segment_0\"\n\"Stage1-GenerateBpuTask\",0.09436363636363636,0.224,0.074\n\"Stage2-BpuCoreProcess\",10.827272727272728,11.243,10.671\n\"Total\",10.948545454545455,11.563,10.757\n"
+    }
+  }
+}
