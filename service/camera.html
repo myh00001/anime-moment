@@ -3,11 +3,11 @@
 <main><h1>实时动漫相机</h1><p>镜像显示 · 运动稳脸与日漫人物重绘 · S100 BPU 处理</p>
 <div class="controls"><button id="start">开启实时摄像头</button><button id="stop" disabled>停止</button><button id="fullscreen">全屏动漫画面</button><select id="camera"><option value="">默认摄像头</option></select></div>
 <p id="capture-info">默认按设备最高分辨率采集，并争取该分辨率下的最高帧率。</p>
-<div class="controls"><label>上传长边（像素）<input id="upload-edge" aria-label="上传长边" type="number" min="0" max="8192" value="0" style="width:90px"></label><label>输出长边（像素）<input id="output-edge" aria-label="输出长边" type="number" min="320" max="1920" value="960" style="width:90px"></label><button id="apply">应用分辨率</button><span id="setting-result" role="status"></span></div>
-<p>上传填 0 使用原尺寸；另一边按原画比例自动计算。输出 320–1920，实时预览推荐 640，清晰预览推荐 960；设置在下一帧生效并自动保存。</p>
-<div class="views"><div class="panel">摄像头原画<video id="video" autoplay playsinline muted></video></div><div class="panel">实时动漫画面<canvas id="output" width="960" height="540"></canvas></div></div><p id="status">点击开启，允许浏览器使用摄像头。</p></main>
+<div class="controls"><label>上传长边（像素）<input id="upload-edge" aria-label="上传长边" type="number" min="0" max="8192" value="0" style="width:90px"></label><label>输出长边（像素）<input id="output-edge" aria-label="输出长边" type="number" min="320" max="1920" value="1920" style="width:90px"></label><button id="apply">应用分辨率</button><span id="setting-result" role="status"></span></div>
+<p>上传填 0 使用原尺寸；另一边按原画比例自动计算。输出 320–1920，默认使用最高输出1920，可调低以提高帧率；设置在下一帧生效并自动保存。</p>
+<div class="views"><div class="panel">摄像头原画<video id="video" autoplay playsinline muted></video></div><div class="panel">实时动漫画面<canvas id="output" width="1920" height="1080"></canvas></div></div><p id="status">点击开启，允许浏览器使用摄像头。</p></main>
 <script>
-const $=id=>document.getElementById(id),video=$('video'),output=$('output'),capture=document.createElement('canvas');let stream=null,running=false,controller=null,generation=0,uploadEdge=0,outputEdge=960;
+const $=id=>document.getElementById(id),video=$('video'),output=$('output'),capture=document.createElement('canvas');let stream=null,running=false,controller=null,generation=0,uploadEdge=0,outputEdge=1920;
 function applySettings(){const u=Number($('upload-edge').value),o=Number($('output-edge').value);if(!Number.isInteger(u)||u<0||u>8192||!Number.isInteger(o)||o<320||o>1920){$('setting-result').textContent='上传须为 0–8192，输出须为 320–1920 的整数';return false;}uploadEdge=u;outputEdge=o;try{localStorage.setItem('anime-resolution',JSON.stringify({uploadEdge,outputEdge}));}catch{}$('setting-result').textContent='已应用';return true;}
 try{const saved=JSON.parse(localStorage.getItem('anime-resolution')||'null');if(saved){$('upload-edge').value=saved.uploadEdge;$('output-edge').value=saved.outputEdge;applySettings();}}catch{}
 async function encodeCapture(){if(capture.convertToBlob)return capture.convertToBlob({type:'image/jpeg',quality:.95});const raw=atob(capture.toDataURL('image/jpeg',.95).split(',')[1]);return new Blob([Uint8Array.from(raw,c=>c.charCodeAt(0))],{type:'image/jpeg'});}

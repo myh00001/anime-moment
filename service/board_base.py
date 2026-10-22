@@ -27,7 +27,7 @@ class AnimeCamera:
         finally:
             self._scene_request = False
         oh, ow = out.shape[:2]
-        source = cv2.resize(rgb, (ow, oh), interpolation=cv2.INTER_AREA)
+        source = cv2.resize(rgb, (ow, oh), interpolation=cv2.INTER_AREA) if self.use_tracking or self.use_temporal else None
         detect_scale = 480 / max(ow, oh)
         dw, dh = (round(ow * detect_scale), round(oh * detect_scale))
         px, py = ((480 - dw) // 2, (480 - dh) // 2)
@@ -40,7 +40,7 @@ class AnimeCamera:
             ordered = sorted(faces, key=lambda f: f[2] * f[3], reverse=True)[:3]
             landmarks = [(face[4:14].reshape(5, 2) - np.array([px, py])) / detect_scale for face in ordered]
             head_boxes = [np.r_[(face[:2] - np.array([px, py])) / detect_scale, face[2:4] / detect_scale] for face in ordered]
-        gray = cv2.cvtColor(source, cv2.COLOR_RGB2GRAY)
+        gray = cv2.cvtColor(source if source is not None else rgb, cv2.COLOR_RGB2GRAY)
         if self.use_tracking:
             points_list, tracked = self.face_continuity.update(gray, landmarks)
         else:
@@ -94,8 +94,9 @@ class AnimeCamera:
                 face_coverage[y0:y1,x0:x1]=np.maximum(face_coverage[y0:y1,x0:x1],mask[:,:,0])
                 out[y0:y1,x0:x1]=np.uint8(out[y0:y1,x0:x1].astype(np.float32)*(1-mask)+restored*mask)
                 self.last_face_stats['refined'] += 1
-        detail = out.astype(np.float32) - cv2.GaussianBlur(out.astype(np.float32), (0, 0), 0.75)
-        out = np.clip(out.astype(np.float32) * 0.98 + 4 + detail * 0.22, 0, 255).astype(np.uint8)
+        floating = out.astype(np.float32)
+        detail = floating - cv2.GaussianBlur(floating, (0, 0), 0.75)
+        out = np.clip(floating * 0.98 + 4 + detail * 0.22, 0, 255).astype(np.uint8)
         if self.use_temporal and self.previous_source is not None and (self.previous_source.shape == source.shape):
             change = np.max(np.abs(source.astype(np.float32) - self.previous_source.astype(np.float32)), axis=2)
             change = cv2.dilate(change, np.ones((7, 7), np.uint8))
@@ -104,6 +105,6 @@ class AnimeCamera:
             weight *= 1 - face_coverage
             out = np.uint8(out.astype(np.float32) * (1 - weight[..., None]) + self.previous_output * weight[..., None])
         self.current_face_coverage = face_coverage
-        self.previous_source = source.copy()
-        self.previous_output = out.copy()
+        self.previous_source = source.copy() if self.use_temporal else None
+        self.previous_output = out.copy() if self.use_temporal else None
         return out

@@ -64,7 +64,7 @@ async def frame(request: Request):
     if busy:
         raise HTTPException(429, 'Processing latest frame; skip queued frames')
     try:
-        edge = int(request.query_params.get('output_edge', '640'))
+        edge = int(request.query_params.get('output_edge', '1920'))
         if not 320 <= edge <= 1920:
             raise ValueError()
     except ValueError:

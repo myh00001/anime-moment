@@ -9,6 +9,11 @@ from display_settings import DEFAULT_SETTINGS,cover_geometry,load_settings,save_
 
 
 class DisplaySettingsTests(unittest.TestCase):
+    def test_default_and_missing_file_use_highest_supported_output(self):
+        self.assertEqual(max(DEFAULT_SETTINGS['width'],DEFAULT_SETTINGS['height']),1920)
+        with tempfile.TemporaryDirectory() as directory:
+            self.assertEqual(load_settings(Path(directory)/'missing.json'),DEFAULT_SETTINGS)
+
     def test_resolution_keeps_source_field_of_view(self):
         for width,height in [(1920,1080),(1080,1920),(1600,1200)]:
             for edge in [640,960,1280,1920]:
