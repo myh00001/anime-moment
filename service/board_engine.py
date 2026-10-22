@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 from board_base import AnimeCamera,ROOT
 from hbm_runner import HbmRunner
-from image_math import normalized_pixels,decoded_pixels_owned
+from image_math import normalized_pixels,decoded_pixels_owned,luminance_lut
 from display_settings import DEFAULT_SETTINGS
 _LABEL_TABLES = {}
 _YY, _XX = np.mgrid[:512, :512].astype(np.float32)
@@ -29,6 +29,7 @@ class BoardCamera(AnimeCamera):
 
     def __init__(self):
         super().__init__()
+        cv2.setNumThreads(6)
         self.scene_size = max(DEFAULT_SETTINGS['width'],DEFAULT_SETTINGS['height'])
         self.face_detail_fallbacks = self.stable_faces = 0
         self.alignment_template = np.float32([[192.98138, 239.94708], [318.90277, 240.1936], [256.63416, 314.01935], [201.26117, 371.41043], [313.08905, 371.15118]])
@@ -199,15 +200,21 @@ class BoardCamera(AnimeCamera):
         source = cv2.bilateralFilter(source, 5, 24, 4)
         lab = cv2.cvtColor(generated, cv2.COLOR_RGB2LAB)
         original = cv2.cvtColor(source, cv2.COLOR_RGB2LAB)
-        light_channel = lab[:, :, 0].astype(np.float32)
+        light_channel = lab[:, :, 0].copy()
         # Quarter weights are exact in binary. CV_32F preserves the original
         # float result; cast afterwards to truncate, rather than rounding to u8.
         lab = cv2.addWeighted(lab, 0.25, original, 0.75, 0, dtype=cv2.CV_32F).astype(np.uint8)
-        low, high = luminance_percentiles(light_channel)
+        histogram = cv2.calcHist([light_channel], [0], None, [256], [0, 256]).ravel().astype(np.int64)
+        cdf = histogram.cumsum()
+        indices = (light_channel.size - 1) * np.array([0.02, 0.98])
+        lower, upper = np.floor(indices).astype(int), np.ceil(indices).astype(int)
+        lo, hi = np.searchsorted(cdf, lower + 1), np.searchsorted(cdf, upper + 1)
+        low, high = lo + (hi - lo) * (indices - lower)
         if high - low > 40:
-            light = np.clip((light_channel - low) * 224 / (high - low) + 16, 0, 255)
-            light_channel = light_channel * 0.35 + light * 0.65
-        lab[:, :, 0] = np.uint8(np.clip(light_channel, 0, 255))
+            # The source L channel is uint8: evaluate the existing float32
+            # expression for its 256 possible values, then apply it exactly.
+            light_channel = cv2.LUT(light_channel, luminance_lut(low, high))
+        lab[:, :, 0] = light_channel
         out = cv2.cvtColor(lab, cv2.COLOR_LAB2RGB)
         gray = cv2.cvtColor(out, cv2.COLOR_RGB2GRAY)
         edges = cv2.Canny(cv2.GaussianBlur(gray, (3, 3), 0.55), 75, 150)
