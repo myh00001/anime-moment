@@ -185,3 +185,8 @@ v4l2-ctl -d /dev/video0 --list-formats-ext
 融合描边C循环在单人96帧ABBA中未得到稳定收益：原方案2.737/2.753FPS，候选2.740/2.544FPS，全部逐像素一致。无人复杂背景128帧测试中，显式ACTIVE等待下原方案6.47～6.56FPS、描边候选6.56～6.67FPS，收益不足。此轮保留正式描边路径。
 
 同一背景显式PASSIVE等待约8.23～8.25FPS，但这只能说明PASSIVE优于强制ACTIVE；生产默认未设置该变量，不能把这约26%差异宣传为生产提升。后续单独与真实默认配置作有人/无人交替复测。脱敏初筛数值见[描边与等待策略记录](benchmarks/2026-10-23-edge-wait-exploration.json)。
+
+
+### PASSIVE与真实默认策略复测（未采用）
+
+每组144帧，真实默认取消OMP_WAIT_POLICY和GOMP_SPINCOUNT，再与PASSIVE作ABBA对照。单人默认2.755/2.753FPS、PASSIVE2.755/2.719FPS；无人默认8.186/8.278FPS、PASSIVE8.192/8.285FPS。全部逐像素一致。相对真实默认没有稳定吞吐或延迟收益，因此保留原环境，不增加等待策略变量。此前强制ACTIVE的负面结果不代表生产配置。数值见[等待策略复测](benchmarks/2026-10-23-wait-policy.json)。
