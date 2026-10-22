@@ -1,0 +1,78 @@
+{
+  "frames_per_case": 192,
+  "deployed": false,
+  "results": [
+    {
+      "variant": "face-baseline-A",
+      "fps": 2.7553476062629847,
+      "latency_ms": 702.7028052663028,
+      "arrival_ms": 715.7724426521396,
+      "bpu_mean_percent": 78.82170542635659,
+      "max_pixel_error": 0,
+      "mae": 0.0
+    },
+    {
+      "variant": "face-shared-A",
+      "fps": 2.756655584321231,
+      "latency_ms": 709.859770972828,
+      "arrival_ms": 718.7496340326334,
+      "bpu_mean_percent": 86.67692307692307,
+      "max_pixel_error": 0,
+      "mae": 0.0
+    },
+    {
+      "variant": "face-shared-B",
+      "fps": 2.546797383765069,
+      "latency_ms": 767.8511588912945,
+      "arrival_ms": 776.057802190206,
+      "bpu_mean_percent": 73.28571428571429,
+      "max_pixel_error": 0,
+      "mae": 0.0
+    },
+    {
+      "variant": "face-baseline-B",
+      "fps": 2.753118000181243,
+      "latency_ms": 702.9555647499927,
+      "arrival_ms": 716.2866709619542,
+      "bpu_mean_percent": 78.13178294573643,
+      "max_pixel_error": 0,
+      "mae": 0.0
+    },
+    {
+      "variant": "background-baseline-A",
+      "fps": 8.69714505198223,
+      "latency_ms": 209.37416359237946,
+      "arrival_ms": 219.43215814129596,
+      "bpu_mean_percent": 27.676470588235293,
+      "max_pixel_error": 0,
+      "mae": 0.0
+    },
+    {
+      "variant": "background-shared-A",
+      "fps": 8.939761750480992,
+      "latency_ms": 205.419666364111,
+      "arrival_ms": 211.91261004344142,
+      "bpu_mean_percent": 29.606060606060606,
+      "max_pixel_error": 0,
+      "mae": 0.0
+    },
+    {
+      "variant": "background-shared-B",
+      "fps": 8.936572506838043,
+      "latency_ms": 205.7925069999605,
+      "arrival_ms": 212.32767553262084,
+      "bpu_mean_percent": 29.181818181818183,
+      "max_pixel_error": 0,
+      "mae": 0.0
+    },
+    {
+      "variant": "background-baseline-B",
+      "fps": 8.670569800860497,
+      "latency_ms": 209.7894236902527,
+      "arrival_ms": 220.04830323913646,
+      "bpu_mean_percent": 28.235294117647058,
+      "max_pixel_error": 0,
+      "mae": 0.0
+    }
+  ]
+}
