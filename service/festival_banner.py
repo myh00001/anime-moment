@@ -38,16 +38,18 @@ def draw_banner(c,width,height,emblem=None,remaining=None,now=0):
         c.save();c.translate(margin,(height-logo)/2);c.scale(ratio,ratio)
         Gdk.cairo_set_source_pixbuf(c,emblem,0,0);c.paint();c.restore()
     if remaining is not None:
-        cx=width/2;cy=height*.49
-        wave=math.sin(now*6)
-        c.save();c.translate(cx+16*scale*wave,cy+3*scale*math.sin(now*8));c.rotate(.075*wave)
-        label('看向这里',0,0,39,True,'center',outline=2.5);c.restore()
-        label('看向屏幕上方的摄像头',cx,height*.82,17,False,'center',(.67,.81,.80))
+        cx=width/2;cy=height*.48
+        wave=math.sin(now*10)
+        for side in [-1,1]:
+            c.save();c.translate(cx+side*280*scale+25*scale*wave,cy+2*scale*math.sin(now*12))
+            c.rotate(side*.11*wave)
+            label('看向这里',0,0,58,True,'center',outline=2.5);c.restore()
+        label('看向屏幕上方的摄像头',cx,height*.89,17,False,'center',(.67,.81,.80))
         c.set_source_rgb(.64,.93,.85);c.set_line_width(max(4,8*scale))
         c.set_line_cap(1);c.set_line_join(1)
         for side in [-1,1]:
-            x=cx+side*48*scale+12*scale*wave;y=max(10*scale,height*.10+math.sin(now*7)*14*scale)
-            sx=cx+side*190*scale+14*scale*wave;sy=height*.65+8*scale*wave
+            x=cx+side*22*scale+5*scale*wave;y=max(12*scale,height*.12+math.sin(now*12)*10*scale)
+            sx=cx+side*55*scale+8*scale*wave;sy=height*.72+5*scale*wave
             dx,dy=x-sx,y-sy;length=max(1,math.hypot(dx,dy));ux,uy=dx/length,dy/length
             c.move_to(sx,sy);c.line_to(x,y)
             c.move_to(x-ux*18*scale-uy*10*scale,y-uy*18*scale+ux*10*scale)
