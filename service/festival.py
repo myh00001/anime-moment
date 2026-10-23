@@ -67,19 +67,24 @@ def newspaper(photo, target, captured=None, weather=None):
             else:line+=char
         if line:rows.append(line)
         return rows
-    c.drawImage(str(ROOT/'assets/school-emblem.png'),8*mm,185*mm,17*mm,17*mm,preserveAspectRatio=True,anchor='c',mask='auto')
-    text(30,192,'漫像时刻',34,bold=True)
-    text(30,185,'AI 动漫拍报机',12,bold=True)
-    text(30,179,'北京市第65中学2026年校园科技节',10.5)
+    c.drawImage(str(ROOT/'assets/school-emblem.png'),7*mm,179*mm,25*mm,25*mm,preserveAspectRatio=True,anchor='c',mask='auto')
+    text(35,192,'漫像时刻',34,bold=True)
+    text(35,185,'AI 动漫拍报机',12,bold=True)
+    text(35,179,'北京市第65中学2026年校园科技节',10.5)
     text(140,196,'2026',17,font='Helvetica-Bold',align='right')
     text(140,187,'校园纪念刊',10.5,align='right')
     rule(177,1)
     when=captured or datetime.now(ZoneInfo('Asia/Shanghai'))
     text(8,172,when.strftime('%Y.%m.%d  %H:%M:%S'),10)
     available=weather_label(weather,when)!='北京 天气暂不可用'
-    text(103,172,'北京',10)
-    draw_weather_icon(c,113*mm,169.6*mm,7.2*mm,int(weather['code']) if available else None)
-    text(140,172,f"{float(weather['temperature']):.0f}°C" if available else '暂无',10,align='right')
+    temperature=f"{float(weather['temperature']):.0f}°C" if available else '暂无'
+    temp_width=pdfmetrics.stringWidth(temperature,'FestivalChinese',10)/mm
+    city_width=pdfmetrics.stringWidth('北京','FestivalChinese',10)/mm
+    icon_size=3.6;gap=1.4
+    group_left=140-temp_width-icon_size-city_width-2*gap
+    text(group_left,172,'北京',10)
+    draw_weather_icon(c,(group_left+city_width+gap)*mm,171.7*mm,icon_size*mm,int(weather['code']) if available else None)
+    text(140,172,temperature,10,align='right')
     c.setFillColorRGB(.55,.55,.55);c.rect(8*mm,153*mm,132*mm,12*mm,fill=1,stroke=0);c.setFillColorRGB(1,1,1)
     text(74,156.5,'做中学科学 实践促创新',24,align='center',bold=True);c.setFillColorRGB(0,0,0)
     text(74,147,'用一次亲身体验，留下今天的科技记忆',11.5,align='center')
