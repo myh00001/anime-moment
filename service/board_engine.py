@@ -1,4 +1,5 @@
 import concurrent.futures
+import os
 from native_math import quarter_blend_exact
 import cv2
 import numpy as np
@@ -18,6 +19,12 @@ def luminance_percentiles(values):
     lo, hi = np.searchsorted(cdf, lower + 1), np.searchsorted(cdf, upper + 1)
     return lo + (hi - lo) * (indices - lower)
 
+def fast_argmax(chw):
+    """np.argmax over channels, returned as uint8 so label_in() takes its lookup-table path
+    instead of np.isin on int64 (identical labels)."""
+    a = chw.argmax(axis=0)
+    return a.astype(np.uint8) if os.environ.get('RAC_FAST_ARGMAX', '1') == '1' else a
+
 def label_in(labels, ids):
     if labels.dtype != np.uint8:
         return np.isin(labels, ids)
@@ -36,9 +43,53 @@ class BoardCamera(AnimeCamera):
         self.scene_size = max(DEFAULT_SETTINGS['width'],DEFAULT_SETTINGS['height'])
         self.face_detail_fallbacks = self.stable_faces = 0
         self.alignment_template = np.float32([[192.98138, 239.94708], [318.90277, 240.1936], [256.63416, 314.01935], [201.26117, 371.41043], [313.08905, 371.15118]])
-        self.trt = {key: HbmRunner(ROOT / 'models' / file) for key, file in {'portrait_v2_512': 'portrait_structure_512.hbm', 'portrait_anime': 'portrait_anime_512.hbm', 'scene': 'scene_640.hbm', 'parser': 'head_parse_512.hbm'}.items()}
+        self.trt = {}
+        self.ort_structure = None
+        self.ort_parser = None
+        self._ort_structure_path = None
+        self._ort_parser_path = None
+        face_on = os.environ.get('RAC_FACE', '0') == '1'
+        # Scene always. Face HBMs only when RAC_FACE=1; missing structure/parser can fall back to ONNX.
+        model_keys = {'scene': 'scene_640.hbm'}
+        if face_on:
+            model_keys.update({'portrait_anime': 'portrait_anime_512.hbm', 'parser': 'head_parse_512.hbm', 'portrait_v2_512': 'portrait_structure_512.hbm'})
+        for key, file in model_keys.items():
+            path = ROOT / 'models' / file
+            if path.exists():
+                self.trt[key] = HbmRunner(path)
+            elif key == 'portrait_v2_512':
+                onnx = ROOT / 'models' / 'portrait_structure_512.onnx'
+                if not onnx.exists():
+                    raise FileNotFoundError(f'missing {file} and {onnx}')
+                self._ort_structure_path = onnx
+                print('ORT_STRUCTURE_LAZY', onnx, flush=True)
+            elif key == 'parser':
+                onnx = ROOT / 'models' / 'head_parse_512.onnx'
+                if not onnx.exists():
+                    raise FileNotFoundError(f'missing {file} and {onnx}')
+                self._ort_parser_path = onnx
+                print('ORT_PARSER_LAZY', onnx, flush=True)
+            else:
+                raise FileNotFoundError(path)
+        print('RAC_FACE', '1' if face_on else '0', 'models', list(self.trt), flush=True)
         self._portrait_labels = None
         self.trt_calls = self.ort_calls = self.torch_calls = 0
+
+    def _ensure_ort_structure(self):
+        if self.ort_structure is None and self._ort_structure_path is not None:
+            import onnxruntime as ort
+            so = ort.SessionOptions()
+            so.intra_op_num_threads = int(os.environ.get('RAC_ORT_THREADS', '2'))
+            self.ort_structure = ort.InferenceSession(str(self._ort_structure_path), so, providers=['CPUExecutionProvider'])
+            print('ORT_STRUCTURE', self._ort_structure_path, flush=True)
+
+    def _ensure_ort_parser(self):
+        if self.ort_parser is None and self._ort_parser_path is not None:
+            import onnxruntime as ort
+            so = ort.SessionOptions()
+            so.intra_op_num_threads = int(os.environ.get('RAC_ORT_THREADS', '2'))
+            self.ort_parser = ort.InferenceSession(str(self._ort_parser_path), so, providers=['CPUExecutionProvider'])
+            print('ORT_PARSER', self._ort_parser_path, flush=True)
 
     def run_ghibli(self, x):
         self.trt_calls += 1
@@ -57,9 +108,17 @@ class BoardCamera(AnimeCamera):
 
     def parse_labels(self, image, size=512):
         x = normalized_pixels(image).transpose(2, 0, 1)[None]
-        self.trt_calls += 1
-        logits = self.trt['parser'](x)[0]
-        labels = logits[0].astype(np.uint8) if logits.ndim == 3 else logits.argmax(axis=1)[0]
+        if 'parser' in self.trt:
+            self.trt_calls += 1
+            logits = self.trt['parser'](x)[0]
+        elif self._ort_parser_path is not None or self.ort_parser is not None:
+            self._ensure_ort_parser()
+            self.ort_calls += 1
+            iname = self.ort_parser.get_inputs()[0].name
+            logits = self.ort_parser.run(None, {iname: np.ascontiguousarray(x, dtype=np.float32)})[0]
+        else:
+            raise RuntimeError('no parser HBM/ORT')
+        labels = logits[0].astype(np.uint8) if logits.ndim == 3 else fast_argmax(logits[0])
         if getattr(self, '_remaining_faces', -1) == 0 and getattr(self, 'on_bpu_chain_done', None):
             self.on_bpu_chain_done()
         return labels
@@ -117,6 +176,12 @@ class BoardCamera(AnimeCamera):
                 x = normalized_pixels(rgb).transpose(2, 0, 1)[None]
                 y = self.trt['portrait_v2_512'](x)[0][0].transpose(1, 2, 0)
                 out = decoded_pixels_owned(y)
+            elif self._ort_structure_path is not None or self.ort_structure is not None:
+                self._ensure_ort_structure()
+                self.ort_calls += 1
+                x = normalized_pixels(rgb).transpose(2, 0, 1)[None]
+                y = self.ort_structure.run(None, {'input': np.ascontiguousarray(x, dtype=np.float32)})[0][0].transpose(1, 2, 0)
+                out = decoded_pixels_owned(np.array(y, dtype=np.float32, copy=True))
             else:
                 self.torch_calls += 1
                 out = super().generate(rgb, 512)
@@ -203,7 +268,10 @@ class BoardCamera(AnimeCamera):
         # Change OpenCV's process-wide pool only at this quiet frame boundary.
         # First frames and frames following a detected face keep six threads;
         # background-only work benefits from fewer competing CPU threads.
-        desired_threads = 6 if self.last_face_stats.get('detected', 1) else 3
+        if os.environ.get('RAC_THREADS'):
+            desired_threads = int(os.environ['RAC_THREADS'])
+        else:
+            desired_threads = 6 if self.last_face_stats.get('detected', 1) else 3
         if cv2.getNumThreads() != desired_threads:
             cv2.setNumThreads(desired_threads)
         h, w = rgb.shape[:2]
