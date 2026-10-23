@@ -5,6 +5,9 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'service'))
 from local_report import LocalReporter,make_report,clean_report,ENDPOINT,WRITER_ENDPOINT,PROMPT,validate_clothing,upper_clothing_observation
 
 class LocalReportTests(unittest.TestCase):
+ def setUp(self):
+  self.environment=patch('local_report.helper_environment',return_value=None)
+  self.environment.start();self.addCleanup(self.environment.stop)
  def test_disabled_never_starts_or_calls_model(self):
   reporter=Mock()
   self.assertEqual(make_report('unused',False,reporter)['state'],'disabled')
@@ -64,6 +67,22 @@ class LocalReportTests(unittest.TestCase):
   with self.assertRaises(ValueError):validate_clothing('体验者身穿连衣裙。','A blue jacket with a black collar.')
   self.assertEqual(validate_clothing('体验者身穿夹克。','A blue jacket.'),'体验者身穿夹克。')
   self.assertEqual(validate_clothing('体验者身穿连衣裙。','A person wearing a dress.'),'体验者身穿连衣裙。')
+
+ def test_cached_environment_launches_original_photo_without_shell(self):
+  reporter=LocalReporter(starter=Mock());process=Mock();process.returncode=0
+  process.communicate.return_value=(json.dumps({'text':'A blue jacket.','seconds':3}).encode(),b'')
+  reporter.wait_ready=Mock();reporter.complete=Mock(return_value='体验者身穿夹克。')
+  with patch('local_report.bpu_available',return_value=True),patch('local_report.helper_environment',return_value={'PATH':'/bin'}),patch('local_report.subprocess.Popen',return_value=process) as launch:
+   reporter.generate('/local/original.jpg')
+  self.assertEqual(launch.call_args.args[0][0],'python3')
+  self.assertIn('/local/original.jpg',launch.call_args.args[0])
+  self.assertEqual(launch.call_args.kwargs['env'],{'PATH':'/bin'})
+
+ def test_environment_capture_cannot_outlive_global_deadline(self):
+  reporter=LocalReporter(timeout=1,starter=Mock())
+  with patch('local_report.bpu_available',return_value=True),patch('local_report.helper_environment',return_value=None),patch('local_report.time.monotonic',side_effect=[0,0,2]),patch('local_report.subprocess.Popen') as launch:
+   with self.assertRaises(TimeoutError):reporter.generate('/local/original.jpg')
+   launch.assert_not_called()
  def test_no_reliable_subject_never_describes_clothing_rack_as_person(self):
   reporter=LocalReporter(starter=Mock());health=io.BytesIO(b'{}');health.status=200
   reporter.opener=Mock();reporter.opener.open.return_value=health

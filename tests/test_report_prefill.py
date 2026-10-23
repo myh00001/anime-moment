@@ -14,6 +14,9 @@ from local_report import LocalReporter, make_report, PROMPT
 
 
 class ReportPrefillTests(unittest.TestCase):
+    def setUp(self):
+        self.environment=patch('local_report.helper_environment',return_value=None)
+        self.environment.start();self.addCleanup(self.environment.stop)
     def test_cache_gate_distinguishes_empty_cached_busy_and_unknown_slots(self):
         engine=LocalReporter(starter=Mock())
         for slots,expected in [([{'id':0,'n_ctx':2048}],False),

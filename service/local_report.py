@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 from report_bpu_caption import available as bpu_available
+from report_environment import helper_environment
 import re
 import subprocess
 import time
@@ -97,7 +98,12 @@ class LocalReporter:
                 helper=Path(__file__).with_name('report_bpu_caption.py')
                 command=['bash','-c','source /opt/tros/humble/setup.bash && exec python3 "$@"',
                          'festival-bpu-report',str(helper),str(photo),str(max(.1,min(25,left-3)))]
-                process=subprocess.Popen(command,stdout=subprocess.PIPE,stderr=subprocess.PIPE,start_new_session=True)
+                helper_env=helper_environment(deadline)
+                left=deadline-time.monotonic()
+                if left<=0:raise TimeoutError('本地报道生成超时')
+                if helper_env is not None:
+                    command=['python3',str(helper),str(photo),str(max(.1,min(25,left-3)))]
+                process=subprocess.Popen(command,stdout=subprocess.PIPE,stderr=subprocess.PIPE,start_new_session=True,env=helper_env)
                 try:
                     output,_=process.communicate(timeout=max(.1,left))
                 except subprocess.TimeoutExpired:
