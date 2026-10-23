@@ -17,7 +17,7 @@ from gi.repository import Gtk,Gdk,GdkPixbuf,GLib,Pango,PangoCairo
 
 class Player:
  def __init__(self,start_workers=True):
-  self.lock=threading.Lock();self.latest=None;self.sequence=0;self.result=None;self.message='等待 USB 摄像头接入…';self.running=True;self.capture_info={};self.painted=None;self.paint_size=None;self.heartbeat=0
+  self.inference_idle=threading.Event();self.lock=threading.Lock();self.latest=None;self.sequence=0;self.result=None;self.message='等待 USB 摄像头接入…';self.running=True;self.capture_info={};self.painted=None;self.paint_size=None;self.heartbeat=0
   self.settings=load_settings(ROOT/'display-settings.json')
   self.festival_settings=load_options(ROOT/'festival-settings.json')
   self.window=Gtk.Window(title='S100 实时动漫相机');self.window.set_default_size(1280,720)
@@ -57,7 +57,7 @@ class Player:
    from festival import Festival
    def latest_for_gesture():
     with self.lock:return self.sequence,self.latest
-   self.festival=Festival(latest_for_gesture,lambda photo:GLib.idle_add(self.add_photo,photo),lambda:self.running,configuration=lambda:dict(self.festival_settings))
+   self.festival=Festival(latest_for_gesture,lambda photo:GLib.idle_add(self.add_photo,photo),lambda:self.running,configuration=lambda:dict(self.festival_settings),wait_inference_idle=lambda:self.inference_idle.wait(8))
    for photo in self.festival.history:self.add_photo(photo)
    if self.festival_settings.get('ai_report',False):self.warm_report_model()
    self.window.fullscreen()
@@ -297,9 +297,10 @@ class Player:
    with self.lock:return self.sequence,self.latest
   while self.running:
    try:
-    for output,metrics in run_pipeline(latest,lambda:self.running,configuration=lambda:self.settings):
+    for output,metrics in run_pipeline(latest,lambda:self.running,configuration=lambda:self.settings,paused=lambda:bool(self.festival and getattr(self.festival,'ai_busy_at',0)),idle=lambda value:self.inference_idle.set() if value else self.inference_idle.clear()):
      if metrics['settings']!=self.settings:continue
      if metrics['settings']!=last_settings:self.frame_times.clear();last_settings=metrics['settings']
+     if self.festival and getattr(self.festival,'ai_busy_at',0):continue
      self.result=output;count+=1
      if self.festival:self.festival.accept(output,metrics['capture_sequence'],metrics.pop('original_bgr',None))
      now=time.monotonic();self.frame_times.append(now)

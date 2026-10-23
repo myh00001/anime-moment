@@ -153,9 +153,9 @@ def dispatch_output(pdf, options, submitter=submit_print):
     return {'state':'submitted','printer':options['printer'],'job':submitter(pdf,printer=options['printer'])}
 
 class Festival:
-    def __init__(self, latest, notify, running, configuration=lambda:dict(DEFAULT_OPTIONS)):
+    def __init__(self, latest, notify, running, configuration=lambda:dict(DEFAULT_OPTIONS), wait_inference_idle=lambda:True):
         self.latest=latest;self.notify=notify;self.running=running
-        self.configuration=configuration
+        self.configuration=configuration;self.wait_inference_idle=wait_inference_idle
         self.weather=WeatherCache(ROOT/'weather-cache.json',running)
         self.lock=threading.Lock();self.deadline=None;self.min_sequence=None;self.shutter_at=0;self.pickup_at=0;self.ai_busy_at=0;self.report_stage=''
         self.status='比 ✌ 即可开始 3 秒拍照倒计时';self.jobs=queue.Queue(maxsize=2)
@@ -195,6 +195,8 @@ class Festival:
             hand=MPHandPose(str(ROOT/'models/handpose_estimation_mediapipe_2023feb.onnx'),confThreshold=.35)
             latch=GestureLatch();last=-1;region_index=0;locked_region=None;region_shape=None;locked_until=0
             while self.running():
+                if getattr(self,'ai_busy_at',0):
+                    time.sleep(.1);continue
                 start=time.monotonic();seq,frame=self.latest()
                 if frame is not None and seq!=last:
                     last=seq;h,w=frame.shape[:2]
@@ -255,12 +257,16 @@ class Festival:
                 folder.mkdir()
                 photo=folder/'photo.jpg';Image.fromarray(rgb).save(photo,quality=96,subsampling=0)
                 self.history=(self.history+[photo])[-100:];self.notify(photo)
-                if options.get('ai_report',False):self.status='照片已保存，正在本地生成报道…'
+                inference_ready=True
+                if options.get('ai_report',False):
+                    self.status='照片已保存，正在本地生成报道…'
+                    inference_ready=getattr(self,'wait_inference_idle',lambda:True)()
                 original=folder/'original.jpg'
                 if original_bgr is not None:
                     Image.fromarray(original_bgr[:,:,::-1]).save(original,quality=96,subsampling=0)
                     record['report_source']='original.jpg'
-                report=make_report(original,options.get('ai_report',False));record['ai_report']=report;journal()
+                report=make_report(original,options.get('ai_report',False)) if inference_ready else {'enabled':True,'state':'fallback','reason':'InferenceNotIdle'}
+                record['ai_report']=report;journal()
                 if options.get('ai_report',False):self.report_stage='正在排版纪念报纸'
                 pdf=folder/'newspaper.pdf';weather=self.weather.snapshot() if hasattr(self,'weather') else None;newspaper(photo,pdf,weather=weather,report=report.get('text'))
                 record['weather']=weather

@@ -14,6 +14,8 @@ def main():
         '--alias','local-caption-vlm','--port','8087','--image-max-tokens','64'],
         common+['--model',str(root/'Qwen3-0.6B-Q8_0.gguf'),
         '--alias','local-report-writer','--port','8088']]
+    from report_bpu_caption import available
+    if available():commands=commands[1:]  # BPU replaces the CPU image encoder.
     stopping=threading.Event();children=[]
     for sig in (signal.SIGTERM,signal.SIGINT):signal.signal(sig,lambda *_:stopping.set())
     try:

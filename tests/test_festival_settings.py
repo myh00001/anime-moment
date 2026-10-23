@@ -61,7 +61,9 @@ class PhotoWallSettingsTests(unittest.TestCase):
    raw=np.zeros((4,4,3),np.uint8);raw[:,:,0]=255 # BGR blue, different from anime RGB red.
    f.accept(anime,9,raw);self.assertTrue(f.jobs.empty())
    f.accept(anime,10,raw)
+   drained=[];f.wait_inference_idle=lambda:drained.append(True) or True
    def report(path,enabled):
+    self.assertEqual(drained,[True])
     self.assertTrue(enabled);self.assertEqual(path.name,'original.jpg')
     self.assertGreater(f.ai_busy_at,0);self.assertFalse(f.trigger())
     pixel=Image.open(path).getpixel((0,0));self.assertGreater(pixel[2],240);self.assertLess(pixel[0],10)
@@ -107,5 +109,19 @@ class PhotoWallSettingsTests(unittest.TestCase):
    f.accept(np.zeros((2,2,3),np.uint8),1)
    with patch('festival.make_report',side_effect=RuntimeError('test')):f.save_loop()
    self.assertEqual(f.ai_busy_at,0);self.assertEqual(f.pickup_at,0);self.assertTrue(f.trigger())
+
+ def test_busy_anime_timeout_uses_fixed_copy_and_unlocks(self):
+  import queue,threading,numpy as np,json
+  from unittest.mock import patch
+  with tempfile.TemporaryDirectory() as folder:
+   f=Festival.__new__(Festival);f.lock=threading.Lock();f.min_sequence=1;f.deadline=None;f.jobs=queue.Queue()
+   f.configuration=lambda:dict(DEFAULT_OPTIONS,ai_report=True,print_enabled=False)
+   f.running=lambda:False;f.directory=Path(folder);f.history=[];f.notify=lambda photo:None;f.wait_inference_idle=lambda:False
+   f.accept(np.zeros((2,2,3),np.uint8),1)
+   with patch('festival.make_report') as report,patch('festival.newspaper') as newspaper:
+    f.save_loop();report.assert_not_called();self.assertIsNone(newspaper.call_args.kwargs['report'])
+   result=json.loads(next(Path(folder).glob('*/record.json')).read_text())
+   self.assertEqual(result['state'],'pdf_only');self.assertEqual(result['ai_report']['reason'],'InferenceNotIdle')
+   self.assertEqual(f.ai_busy_at,0)
 
 if __name__=='__main__':unittest.main()

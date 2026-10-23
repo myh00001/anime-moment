@@ -1,8 +1,8 @@
 import sys,unittest,io,json,tempfile
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock,patch
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'service'))
-from local_report import LocalReporter,make_report,clean_report,ENDPOINT,WRITER_ENDPOINT
+from local_report import LocalReporter,make_report,clean_report,ENDPOINT,WRITER_ENDPOINT,PROMPT
 
 class LocalReportTests(unittest.TestCase):
  def test_disabled_never_starts_or_calls_model(self):
@@ -40,5 +40,23 @@ class LocalReportTests(unittest.TestCase):
   text=clean_report('一位穿着蓝色外套的人抬起手，动作清晰。')
   self.assertIn('蓝色外套',text);self.assertIn('科技节的专属纪念',text)
   self.assertIn('AI动漫拍照',clean_report('蓝衣体验者举起手臂。'))
+
+ def test_prompt_includes_verified_context_and_separates_it_from_observation(self):
+  for phrase in ['北京市第六十五中学2026年校园科技节','做中学科学','实践促创新','漫像时刻','不代表图片里一定发生','身份','不得猜测']:self.assertIn(phrase,PROMPT)
+
+ def test_bpu_path_uses_original_file_and_only_calls_cpu_writer(self):
+  reporter=LocalReporter(starter=Mock());health=io.BytesIO(b'{}');health.status=200
+  text='蓝色外套的体验者面向镜头。AI动漫拍照留下科技节纪念。'
+  writer=io.BytesIO(json.dumps({'choices':[{'message':{'content':text}}]}).encode())
+  reporter.opener=Mock();reporter.opener.open.side_effect=[health,writer]
+  process=Mock();process.returncode=0
+  process.communicate.return_value=(json.dumps({'text':'A person in a blue jacket faces the camera.','seconds':3.2}).encode(),b'')
+  with patch('local_report.bpu_available',return_value=True),patch('local_report.subprocess.Popen',return_value=process) as launch:
+   self.assertEqual(reporter.generate('/local/capture/original.jpg'),text)
+  self.assertIn('/local/capture/original.jpg',launch.call_args.args[0])
+  self.assertEqual(reporter.opener.open.call_count,2)
+  self.assertEqual(reporter.backend,'S100 BPU vision + CPU text')
+  self.assertEqual(reporter.vision_seconds,3.2)
+  self.assertIn('blue jacket',json.loads(reporter.opener.open.call_args.args[0].data)['messages'][1]['content'])
 
 if __name__=='__main__':unittest.main()

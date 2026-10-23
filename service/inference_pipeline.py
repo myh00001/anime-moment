@@ -77,7 +77,7 @@ def render_worker(slot, tasks, events, release_stage='structure'):
             events.put(('error', slot, seq, repr(exc)))
 
 
-def run_pipeline(latest, running, release_stage=None, configuration=None):
+def run_pipeline(latest, running, release_stage=None, configuration=None, paused=lambda:False, idle=lambda value:None):
     """Yield ordered completed frames; latest() returns (camera_sequence, BGR)."""
     if release_stage is None:
         from native_math import AVAILABLE
@@ -115,7 +115,9 @@ def run_pipeline(latest, running, release_stage=None, configuration=None):
                 raise RuntimeError('BPU worker exited')
             if busy and time.monotonic() - progress > 30:
                 raise RuntimeError('BPU worker stalled')
-            if can_submit and next_slot not in busy:
+            is_paused=paused()
+            idle(is_paused and not busy)
+            if not is_paused and can_submit and next_slot not in busy:
                 seq, frame = latest()
                 if frame is not None and seq != previous:
                     previous = seq
@@ -150,6 +152,7 @@ def run_pipeline(latest, running, release_stage=None, configuration=None):
         for worker in workers:
             if worker.pid is not None:
                 worker.join(timeout=3)
+        idle(not any(worker.is_alive() for worker in workers))
         events.close()
         for task in tasks:
             task.close()

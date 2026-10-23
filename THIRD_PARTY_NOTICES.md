@@ -13,3 +13,5 @@
 |本地视觉语言推理服务|[llama.cpp](https://github.com/ggml-org/llama.cpp)|MIT；按需从固定版本源码构建，不随本仓库分发二进制|
 
 依赖包括 NumPy、OpenCV、Pillow、FastAPI、Uvicorn、GTK、PyGObject、Cairo，分别适用各自上游许可。安装后的 `vendor/` 不纳入版本管理。
+
+- Optional S100 BPU vision runtime: [D-Robotics/hobot_llamacpp](https://github.com/D-Robotics/hobot_llamacpp), Apache-2.0; official SmolVLM S100 HBM downloaded separately from [D-Robotics model repository](https://huggingface.co/D-Robotics/SmolVLM2-256M-Video-Instruct-GGUF-BPU). No model weights are included.
