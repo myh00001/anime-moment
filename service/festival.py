@@ -53,38 +53,34 @@ def newspaper(photo, target, captured=None, weather=None):
         method={'left':c.drawString,'center':c.drawCentredString,'right':c.drawRightString}[align]
         method(x*mm,y*mm,s)
     def rule(y,weight=.5):c.setLineWidth(weight);c.line(8*mm,y*mm,140*mm,y*mm)
-    c.drawImage(str(ROOT/'assets/school-emblem.png'),8*mm,197*mm,8*mm,8*mm,preserveAspectRatio=True,anchor='c',mask='auto')
-    text(19,200,'北京市第六十五中学',7.2)
-    text(140,200,'2026 · 校园科技节特刊',7.2,align='right')
-    rule(195.5,1);rule(194.3,.4)
-    c.rect(8*mm,180.5*mm,132*mm,12.5*mm,fill=1,stroke=0)
-    c.setFillColorRGB(1,1,1);text(74,184,'六五校园科技报',23,align='center');c.setFillColorRGB(0,0,0)
+    c.drawImage(str(ROOT/'assets/school-emblem.png'),8*mm,185*mm,17*mm,17*mm,preserveAspectRatio=True,anchor='c',mask='auto')
+    text(30,191,'六五 · 科技现场',25)
+    text(30,182,'北京市第六十五中学2026年校园科技节',8.5)
+    text(140,196,'2026',14,font='Helvetica-Bold',align='right')
+    text(140,187,'校园纪念刊',7.5,align='right')
+    rule(177,1)
     when=captured or datetime.now(ZoneInfo('Asia/Shanghai'))
-    text(8,176,when.strftime('%Y.%m.%d  %H:%M:%S'),7.4)
-    text(140,176,weather_label(weather,when),7.4,align='right');rule(173.5,.5)
-    text(74,161,'做中学科学 实践促创新',20,align='center')
-    text(74,148,'ALL EYES ON YOU',27,font='Helvetica-Bold',align='center')
-    text(74,140,'北京市第六十五中学2026年校园科技节',9,align='center')
-    rule(136,1.1);rule(134.6,.4)
-    image=Image.open(photo).convert('RGB');photo_height=min(98.,132*image.height/max(1,image.width));bottom=132-photo_height
+    text(8,172,when.strftime('%Y.%m.%d  %H:%M:%S'),7.4)
+    text(140,172,weather_label(weather,when),7.4,align='right')
+    text(74,158,'做中学科学 实践促创新',20,align='center')
+    text(74,150,'用一次亲身体验，留下今天的科技记忆',8.5,align='center')
+    image=Image.open(photo).convert('RGB');photo_height=min(90.,132*image.height/max(1,image.width));bottom=144-photo_height
     box=(8*mm,bottom*mm,132*mm,photo_height*mm)
     c.drawImage(ImageReader(image),*box,preserveAspectRatio=True,anchor='c')
-    text(8,bottom-4,'今日科技主角 / 每一帧都是你的头条',6.3)
-    text(140,bottom-4,'CAMPUS SCIENCE FESTIVAL',5.8,font='Helvetica-Bold',align='right')
-    rule(bottom-7,1);rule(bottom-8.3,.4)
-    footer=bottom-15
-    text(8,footer,'好奇，是探索的开始。',7)
-    text(8,footer-4.5,'在实践中发现，',6.5);text(8,footer-8.5,'在创造中成长。',6.5)
-    text(74,footer,'YOUNG MAKER',10,font='Helvetica-Bold',align='center')
-    text(74,footer-5,'做中学 · 实践创新',7,align='center')
-    text(74,footer-9,'SCIENCE / CREATE / EXPLORE',4.8,font='Helvetica',align='center')
-    text(101,footer,'让今天成为头条',7)
-    text(101,footer-4.5,'科学与创意，',6.5);text(101,footer-8.5,'在这里相遇。',6.5)
-    c.setLineWidth(.35)
-    for x in (52,96):c.line(x*mm,(footer-10)*mm,x*mm,(footer+3)*mm)
-    text(8,5.5,'AI 动漫留念 · 六五校园科技节',5.5)
+    text(8,bottom-4.5,'现场影像 / 人工智能动漫照相馆',6.5)
+    text(140,bottom-4.5,'校园科技节 · 专属留念',6.5,align='right')
+    rule(bottom-8,.4)
+    footer=bottom-16
+    text(8,footer,'镜头里的科技体验',11)
+    text(79,footer,'把问题交给实践',11)
+    left=['摄像头记录眼前的真实场景，','人工智能将它转化为动漫影像。','这一张照片，留住今天的相遇，','也记录我们与科技的一次对话。']
+    right=['从一次观察，到一次动手；','从一个想法，到一次验证。','在探索中学习，让好奇心','成为下一次发现的起点。']
+    for index,(a,b) in enumerate(zip(left,right)):
+        text(8,footer-7-index*4.5,a,7.7);text(79,footer-7-index*4.5,b,7.7)
+    rule(16,.6)
+    text(8,10,'六五校园 · 在体验中学习，在实践中创新',6.2)
     source='天气：Open-Meteo' if weather_label(weather,when)!='北京 天气暂不可用' else '天气未联网更新'
-    text(140,5.5,source,5.5,align='right')
+    text(140,10,source,5.5,align='right')
     c.showPage();c.save()
 
 def submit_print(pdf, runner=subprocess.run, printer='S100_Festival'):
