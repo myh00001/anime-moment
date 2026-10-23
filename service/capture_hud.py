@@ -49,15 +49,26 @@ def draw_capture_hud(c,width,height,remaining=None,shot_age=None,waiting=False,p
             c.move_to(-72,-229);c.line_to(-67,-224);c.line_to(-57,-234);c.stroke()
             text('拍摄完成',-228,19,True,alpha)
     if ai_age is not None:
-        c.set_source_rgba(.025,.04,.055,.83)
-        c.rectangle(-250,-100,500,200);c.fill()
-        c.set_line_width(5);c.set_line_cap(1)
-        c.set_source_rgba(1,1,1,.18);c.arc(0,-46,20,0,2*math.pi);c.stroke()
-        angle=ai_age*3.6
-        c.set_source_rgba(.64,.93,.85,1);c.arc(0,-46,20,angle,angle+math.pi*1.4);c.stroke()
-        text(report_stage or 'AI 正在生成报道',4,30,True)
-        text('已等待 %d 秒 · 正在制作专属纪念报纸'%max(0,int(ai_age)),45,17,alpha=.88)
-        text('请稍候，完成前暂不接受拍照',76,17,alpha=.75)
+        # Match the shutter countdown: circular scrim, mint ring and corner marks.
+        # The ring rotates rather than claiming an unknown completion percentage.
+        pulse=1+.025*math.sin(ai_age*2.8)
+        c.set_source_rgba(.025,.04,.055,.64);c.arc(0,-15,99,0,2*math.pi);c.fill()
+        c.set_line_width(3);c.set_line_cap(1)
+        c.set_source_rgba(1,1,1,.19);c.arc(0,-15,99,0,2*math.pi);c.stroke()
+        angle=ai_age*2.6-math.pi/2
+        c.set_source_rgba(.64,.93,.85,1);c.arc(0,-15,99,angle,angle+math.pi*1.35);c.stroke()
+        c.save();c.translate(0,-29);c.scale(pulse,pulse)
+        text('AI',0,76,True);c.restore()
+        text('正在制作',39,19,True,alpha=.9)
+        text(report_stage or 'AI 正在生成报道',121,24,True)
+        text('已等待 %d 秒 · 请稍候'%max(0,int(ai_age)),159,16,alpha=.85)
+        text('制作完成前暂不接受拍照',187,15,alpha=.75)
+        c.set_source_rgba(1,1,1,.75);c.set_line_width(2)
+        for sx in [-1,1]:
+            for sy in [-1,1]:
+                x=sx*220;y=sy*175-12
+                c.move_to(x-sx*25,y);c.line_to(x,y);c.line_to(x,y-sy*25)
+        c.stroke()
     if ai_age is None and pickup_age is not None and 0<=pickup_age<8 and remaining is None and not waiting:
         alpha=min(1,pickup_age/.2,(8-pickup_age)/.6)
         c.set_source_rgba(.025,.04,.055,.88*alpha)
