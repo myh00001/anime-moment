@@ -10,9 +10,15 @@ class FestivalTests(unittest.TestCase):
    covered=np.zeros((height,width),dtype=bool)
    for x1,y1,x2,y2 in gesture_regions(width,height):
     self.assertTrue(0<=x1<x2<=width and 0<=y1<y2<=height)
-    self.assertLessEqual(x2-x1,min(width,height)*.75)
+    self.assertLessEqual(x2-x1,min(width,height)*.40)
     covered[y1:y2,x1:x2]=True
    self.assertTrue(covered.all())
+ def test_distant_hand_fits_inside_overlapping_window(self):
+  regions=gesture_regions(1920,1080)
+  # A small hand must not be lost just because it crosses a tile boundary.
+  for x in range(40,1881,40):
+   for y in range(40,1041,40):
+    self.assertTrue(any(a<=x-35 and b<=y-35 and c>=x+35 and d>=y+35 for a,b,c,d in regions))
  def test_victory_geometry_survives_rotation(self):
   p=np.zeros((21,3))
   for base,x in [(5,-1.5),(9,-.5),(13,.5),(17,1.5)]:

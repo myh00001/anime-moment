@@ -12,10 +12,12 @@ ROOT = Path(__file__).resolve().parent
 
 def gesture_regions(width, height):
     """Overlapping native-resolution search windows for distant hands."""
-    side=max(1,int(min(width,height)*.75))
-    xs=np.linspace(0,max(0,width-side),int(math.ceil(width/side))+1).astype(int)
-    ys=np.linspace(0,max(0,height-side),int(math.ceil(height/side))+1).astype(int)
-    return [(int(x),int(y),int(x)+side,int(y)+side) for y in ys for x in xs]
+    side=max(1,int(min(width,height)*.40))
+    stride=max(1,int(side*.65))
+    xs=np.linspace(0,max(0,width-side),int(math.ceil(max(0,width-side)/stride))+1).astype(int)
+    ys=np.linspace(0,max(0,height-side),int(math.ceil(max(0,height-side)/stride))+1).astype(int)
+    regions=[(int(x),int(y),int(x)+side,int(y)+side) for y in ys for x in xs]
+    return sorted(regions,key=lambda r:((r[0]+r[2])/2-width/2)**2+((r[1]+r[3])/2-height/2)**2)
 
 def victory(points):
     """Rotation-independent finger extension, rejecting fists and open palms."""
@@ -164,7 +166,7 @@ class Festival:
             from festival_vendor.mp_handpose import MPHandPose
             palm=MPPalmDet(str(ROOT/'models/palm_detection_mediapipe_2023feb.onnx'),scoreThreshold=.50,topK=32)
             hand=MPHandPose(str(ROOT/'models/handpose_estimation_mediapipe_2023feb.onnx'),confThreshold=.65)
-            latch=GestureLatch();last=-1;region_index=0
+            latch=GestureLatch();last=-1;region_index=0;locked_region=None
             while self.running():
                 start=time.monotonic();seq,frame=self.latest()
                 if frame is not None and seq!=last:
@@ -172,17 +174,26 @@ class Festival:
                     detected=False
                     try:
                         regions=gesture_regions(w,h)
-                        x1,y1,x2,y2=regions[region_index%len(regions)]
-                        # One zoom window per cycle bounds CPU cost; keep a successful
-                        # window while confirming the gesture instead of scanning away.
-                        for view in (frame,frame[y1:y2,x1:x2]):
+                        candidates=[]
+                        if locked_region in regions:candidates.append(locked_region)
+                        candidates.append(None)  # Full frame preserves close-range detection.
+                        candidates.extend(regions[(region_index+i)%len(regions)] for i in range(3))
+                        region_index=(region_index+3)%len(regions)
+                        seen=set()
+                        for region in candidates:
+                            if region in seen:continue
+                            seen.add(region)
+                            if region is None:view=frame
+                            else:
+                                x1,y1,x2,y2=region;view=frame[y1:y2,x1:x2]
                             vh,vw=view.shape[:2];scale=min(1,640/max(vw,vh))
                             small=cv2.resize(view,(max(1,int(vw*scale)),max(1,int(vh*scale))))
                             for row in sorted(palm.infer(small),key=lambda r:-r[-1])[:2]:
                                 pose=hand.infer(small,row)
                                 if pose is not None and victory(pose[67:130]):detected=True;break
-                            if detected:break
-                        if not detected:region_index=(region_index+1)%len(regions)
+                            if detected:
+                                locked_region=region;break
+                        if not detected:locked_region=None
                     except cv2.error as error:print('GESTURE_FRAME',str(error)[:180],flush=True)
                     if latch.update(detected,time.monotonic()):self.trigger()
                 time.sleep(max(.02,.18-(time.monotonic()-start)))
