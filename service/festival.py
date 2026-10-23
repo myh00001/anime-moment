@@ -54,8 +54,9 @@ def newspaper(photo, target, captured=None, weather=None):
         method(x*mm,y*mm,s)
     def rule(y,weight=.5):c.setLineWidth(weight);c.line(8*mm,y*mm,140*mm,y*mm)
     c.drawImage(str(ROOT/'assets/school-emblem.png'),8*mm,185*mm,17*mm,17*mm,preserveAspectRatio=True,anchor='c',mask='auto')
-    text(30,191,'第65中学 · 科技现场',21)
-    text(30,182,'北京市第65中学2026年校园科技节',8.5)
+    text(30,192,'漫像时刻',27)
+    text(30,185,'AI 动漫拍报机',9)
+    text(30,179,'北京市第65中学2026年校园科技节',7.5)
     text(140,196,'2026',14,font='Helvetica-Bold',align='right')
     text(140,187,'校园纪念刊',7.5,align='right')
     rule(177,1)
@@ -71,10 +72,10 @@ def newspaper(photo, target, captured=None, weather=None):
     text(140,bottom-4.5,'校园科技节 · 专属留念',6.5,align='right')
     rule(bottom-8,.4)
     footer=bottom-16
-    text(8,footer,'镜头里的科技体验',11)
-    text(79,footer,'把问题交给实践',11)
-    left=['摄像头记录眼前的真实场景，','人工智能将它转化为动漫影像。','这一张照片，留住今天的相遇，','也记录我们与科技的一次对话。']
-    right=['从一次观察，到一次动手；','从一个想法，到一次验证。','在探索中学习，让好奇心','成为下一次发现的起点。']
+    text(8,footer,'作品说明',11)
+    text(79,footer,'可看 · 可玩 · 可带走',10)
+    left=['基于 RDK S100，将摄像头画面','实时转化为动漫风格。比出 V 手势，','即可倒计时拍照，并自动生成、','打印专属科技节纪念报纸。']
+    right=['看见 AI 的实时创作，','用一个手势留下此刻，','让科技节的体验与回忆，','成为一份可以带走的纪念。']
     for index,(a,b) in enumerate(zip(left,right)):
         text(8,footer-7-index*4.5,a,7.7);text(79,footer-7-index*4.5,b,7.7)
     rule(16,.6)
