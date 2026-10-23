@@ -12,8 +12,8 @@ jobs:
           python-version: '3.10'
       - name: Compile Python sources
         run: python -m compileall -q service scripts tests
-      - name: Install arithmetic test dependency
-        run: python -m pip install numpy==1.24.4
+      - name: Install test dependencies
+        run: python -m pip install numpy==1.24.4 Pillow==10.4.0
       - name: Build exact native image kernels
         run: bash scripts/build_native.sh
       - name: Check display geometry and persistent settings
