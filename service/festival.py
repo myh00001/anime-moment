@@ -49,7 +49,7 @@ def newspaper(photo, target, captured=None, weather=None):
     if 'FestivalChinese' not in pdfmetrics.getRegisteredFontNames():pdfmetrics.registerFont(TTFont('FestivalChinese',font))
     if 'FestivalChineseBold' not in pdfmetrics.getRegisteredFontNames():pdfmetrics.registerFont(TTFont('FestivalChineseBold',bold_font))
     width,height=148*mm,210*mm
-    c=canvas.Canvas(str(target),pagesize=(width,height),initialFontName='FestivalChinese');c.setTitle('北京市第65中学2026年校园科技节')
+    c=canvas.Canvas(str(target),pagesize=(width,height),initialFontName='FestivalChinese');c.setTitle('北京市第六十五中学2026年校园科技节')
     c.setFillColorRGB(1,1,1);c.rect(0,0,width,height,fill=1,stroke=0)
     c.setFillColorRGB(0,0,0);c.setStrokeColorRGB(0,0,0)
     def text(x,y,s,size,font='FestivalChinese',align='left',bold=False):
@@ -73,7 +73,7 @@ def newspaper(photo, target, captured=None, weather=None):
     c.drawImage(str(ROOT/'assets/school-emblem.png'),7*mm,179*mm,25*mm,25*mm,preserveAspectRatio=True,anchor='c',mask='auto')
     text(35,194,'漫像时刻',24,bold=True)
     text(35,187,'AI 动漫拍报机',10.5)
-    text(35,181,'北京市第65中学2026年校园科技节',10)
+    text(35,181,'北京市第六十五中学2026年校园科技节',10)
     text(140,196,'2026',14,font='Helvetica-Bold',align='right')
     text(140,188,'校园纪念刊',9.5,align='right')
     rule(177,1)
@@ -107,7 +107,7 @@ def newspaper(photo, target, captured=None, weather=None):
         for index,line in enumerate(rows):
             text(x,footer-8-index*5.3,line,10.5)
     rule(16,.6)
-    text(74,10,'第65中学 · 在体验中学习，在实践中创新',8.5,align='center')
+    text(74,10,'第六十五中学 · 在体验中学习，在实践中创新',8.5,align='center')
     c.showPage();c.save()
 
 def submit_print(pdf, runner=subprocess.run, printer='S100_Festival'):
