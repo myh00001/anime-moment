@@ -1,5 +1,6 @@
 """One-shot official S100 BPU vision encoder; run with the TROS environment."""
 import json
+import hashlib
 import os
 from pathlib import Path
 import signal
@@ -9,6 +10,23 @@ import time
 
 ENCODER='SigLip_int16_SmolVLM2_256M_Instruct_S100.hbm'
 NODE='/opt/tros/humble/lib/hobot_llamacpp/hobot_llamacpp'
+
+def decoder_profile(root):
+    fallback={'node':NODE,'threads':4,'decoder':'official sampled'}
+    folder=Path(root)/'local-vlm/report-runtime'
+    binary=folder/'hobot_llamacpp'
+    try:
+        manifest=json.loads((folder/'manifest.json').read_text())
+        if not isinstance(manifest,dict):return fallback
+        if (not os.access(binary,os.X_OK)
+            or manifest.get('source_commit')!='439f23f6c9b09eaebcf84027a0911c220fb4fb34'
+            or manifest.get('temperature')!=0 or manifest.get('seed')!=0
+            or manifest.get('threads')!=6
+            or hashlib.sha256(binary.read_bytes()).hexdigest()!=manifest.get('sha256')):
+            return fallback
+    except (OSError,ValueError):
+        return fallback
+    return {'node':str(binary),'threads':6,'decoder':'greedy seed 0'}
 
 def model_profile():
     root=Path(__file__).resolve().parent/'local-vlm'
@@ -28,6 +46,7 @@ def caption(photo,timeout=25):
     import rclpy
     from ai_msgs.msg import PerceptionTargets
     root=Path(__file__).resolve().parent
+    decoder=decoder_profile(root)
     profile=model_profile()
     if profile is None:raise RuntimeError('BPU model assets are incomplete')
     import tempfile
@@ -48,8 +67,8 @@ def caption(photo,timeout=25):
     node=rclpy.create_node('festival_report_'+str(os.getpid()))
     topic='/festival_report_'+str(os.getpid());answers=[]
     subscription=node.create_subscription(PerceptionTargets,topic,answers.append,10)
-    command=[NODE,'--ros-args','-p','feed_type:=0','-p','model_type:=1',
-        '-p','image:='+str(view),'-p','image_type:=0','-p','llm_threads:=4',
+    command=[decoder['node'],'--ros-args','-p','feed_type:=0','-p','model_type:=1',
+        '-p','image:='+str(view),'-p','image_type:=0','-p','llm_threads:='+str(decoder['threads']),
         '-p','user_prompt:=Describe only the outer top garment worn by the person, in under 12 words. Do not describe pants, objects, gender or clothing on furniture.',
         '-p','model_file_name:='+str(profile['encoder']),
         '-p','llm_model_name:='+str(profile['language']),
@@ -57,7 +76,10 @@ def caption(photo,timeout=25):
         '--log-level','error']
     start=time.monotonic();process=None
     try:
-        process=subprocess.Popen(command,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,start_new_session=True)
+        environment=os.environ.copy()
+        if decoder['decoder']=='greedy seed 0':
+            environment['LD_LIBRARY_PATH']='/opt/tros/humble/lib/aarch64-linux-gnu:'+environment.get('LD_LIBRARY_PATH','')
+        process=subprocess.Popen(command,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,start_new_session=True,env=environment)
         while not answers:
             if process.poll() is not None:raise RuntimeError('BPU vision node exited')
             if time.monotonic()-start>=timeout:raise TimeoutError('BPU image observation timed out')
@@ -65,7 +87,7 @@ def caption(photo,timeout=25):
         text=' '.join(target.type for target in answers[0].targets)
         for token in ('</s>','<end_of_utterance>','<|im_end|>'):text=text.replace(token,'')
         if len(text.strip())<8:raise ValueError('Empty BPU observation')
-        return dict(subject,text=text.strip(),seconds=round(time.monotonic()-start,3),model=profile['name'],
+        return dict(subject,text=text.strip(),seconds=round(time.monotonic()-start,3),model=profile['name'],decoder=decoder['decoder'],
                 perfs=[{'type':p.type,'ms':p.time_ms_duration} for p in answers[0].perfs])
     finally:
         if process and process.poll() is None:

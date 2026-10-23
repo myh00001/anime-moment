@@ -96,6 +96,7 @@ class LocalReporter:
             if process.returncode:raise RuntimeError('BPU看图失败')
             observation=json.loads(output);self.last_caption=observation['text'];self.vision_seconds=observation['seconds']
             self.vision_model=observation.get('model','unknown')
+            self.vision_decoder=observation.get('decoder','official')
             self.subject={key:observation[key] for key in ('subject_visible','faces','source_box') if key in observation}
             if observation.get('subject_visible') is False:
                 return '镜头定格了现场的一刻，AI动漫拍照为科技节留下专属纪念。'
@@ -154,6 +155,7 @@ def make_report(photo,enabled,reporter=None):
         if isinstance(getattr(engine,'last_caption',None),str):result['observation']=engine.last_caption
         if isinstance(getattr(engine,'backend',None),str):result['backend']=engine.backend
         if isinstance(getattr(engine,'vision_model',None),str):result['vision_model']=engine.vision_model
+        if isinstance(getattr(engine,'vision_decoder',None),str):result['vision_decoder']=engine.vision_decoder
         if isinstance(getattr(engine,'subject',None),dict):result['subject']=engine.subject
         if isinstance(getattr(engine,'vision_seconds',None),(int,float)):result['vision_seconds']=engine.vision_seconds
         return result

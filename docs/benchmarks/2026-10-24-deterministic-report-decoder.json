@@ -1,0 +1,39 @@
+{
+  "scope": "Writer prompt cache and PDF fonts primed; saved originals; no countdown or printing",
+  "timings": [
+    {
+      "variant": "baseline-A",
+      "ai_seconds": 6.727,
+      "pdf_seconds": 0.757,
+      "total_seconds": 7.485
+    },
+    {
+      "variant": "greedy-A",
+      "ai_seconds": 6.465,
+      "pdf_seconds": 0.762,
+      "total_seconds": 7.227
+    },
+    {
+      "variant": "greedy-B",
+      "ai_seconds": 6.525,
+      "pdf_seconds": 0.749,
+      "total_seconds": 7.274
+    },
+    {
+      "variant": "baseline-B",
+      "ai_seconds": 6.825,
+      "pdf_seconds": 0.748,
+      "total_seconds": 7.573
+    }
+  ],
+  "garment_validation": {
+    "clear_jacket_cases": 7,
+    "official_correct": 5,
+    "official_abstained": 1,
+    "official_incorrect_shirt": 1,
+    "greedy_correct": 7,
+    "six_thread_captions_equal_four_thread": 7,
+    "face_only_case_abstained": true
+  },
+  "limitations": "Related photos of one jacket; not a general accuracy estimate. Source images and model files are excluded."
+}
