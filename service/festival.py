@@ -4,6 +4,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 import json, math, os, queue, subprocess, threading, time, uuid
 import numpy as np
+from festival_settings import DEFAULT_OPTIONS, normalize_options
 
 ROOT = Path(__file__).resolve().parent
 
@@ -66,19 +67,26 @@ def newspaper(photo, target, captured=None):
     text(8,11,'六五校园 · 科技与创意同行',8);text(106,11,when.strftime('%H:%M:%S')+'  留念',8)
     c.showPage();c.save()
 
-def submit_print(pdf, runner=subprocess.run):
+def submit_print(pdf, runner=subprocess.run, printer='S100_Festival'):
     """Exactly one submission attempt; ambiguous failures are never auto-retried."""
-    p=runner(['lp','-d','S100_Festival','-n','1','-o','media=iso_a5_148x210mm','-o','orientation-requested=3','-o','sides=one-sided','-o','media-type=stationery','-o','media-source=auto','-o','print-color-mode=color',str(pdf)],capture_output=True,text=True,timeout=30)
+    printer=normalize_options({'printer':printer})['printer']
+    p=runner(['lp','-d',printer,'-n','1','-o','media=iso_a5_148x210mm','-o','orientation-requested=3','-o','sides=one-sided','-o','media-type=stationery','-o','media-source=auto','-o','print-color-mode=color',str(pdf)],capture_output=True,text=True,timeout=30)
     if p.returncode:raise RuntimeError(p.stderr.strip() or '打印提交失败')
     return p.stdout.strip()
 
+def dispatch_output(pdf, options, submitter=submit_print):
+    options=normalize_options(options)
+    if not options['print_enabled']:return {'state':'pdf_only','printer':options['printer']}
+    return {'state':'submitted','printer':options['printer'],'job':submitter(pdf,printer=options['printer'])}
+
 class Festival:
-    def __init__(self, latest, notify, running):
+    def __init__(self, latest, notify, running, configuration=lambda:dict(DEFAULT_OPTIONS)):
         self.latest=latest;self.notify=notify;self.running=running
+        self.configuration=configuration
         self.lock=threading.Lock();self.deadline=None;self.min_sequence=None
         self.status='比 ✌ 保持片刻，3 秒后拍照';self.jobs=queue.Queue(maxsize=2)
         self.directory=ROOT/'captures';self.directory.mkdir(exist_ok=True)
-        self.history=sorted(self.directory.glob('*/photo.jpg'))[-12:]
+        self.history=sorted(self.directory.glob('*/photo.jpg'))[-100:]
         self.worker=threading.Thread(target=self.save_loop,daemon=True);self.worker.start()
         self.detector=threading.Thread(target=self.gesture_loop,daemon=True);self.detector.start()
     def trigger(self):
@@ -96,7 +104,7 @@ class Festival:
         with self.lock:
             if self.min_sequence is None or sequence<self.min_sequence:return
             self.min_sequence=None
-            try:self.jobs.put_nowait(rgb.copy());self.status='正在生成报纸…'
+            try:self.jobs.put_nowait((rgb.copy(),dict(getattr(self,'configuration',lambda:DEFAULT_OPTIONS)())));self.status='正在生成报纸…'
             except queue.Full:self.status='打印任务繁忙，请稍后再拍'
     def gesture_loop(self):
         try:
@@ -119,30 +127,32 @@ class Festival:
                     if latch.update(detected,time.monotonic()):self.trigger()
                 time.sleep(max(.02,.30-(time.monotonic()-start)))
         except Exception as error:
-            self.status='手势识别不可用，可点击拍照';print('GESTURE_ERROR',str(error),flush=True)
+            self.status='手势识别不可用，可按空格拍照';print('GESTURE_ERROR',str(error),flush=True)
     def save_loop(self):
         from PIL import Image
         while self.running() or not self.jobs.empty():
-            try:rgb=self.jobs.get(timeout=.5)
+            try:rgb,options=self.jobs.get(timeout=.5)
             except queue.Empty:
-                if hasattr(self,'last_job'):
+                if hasattr(self,'last_job') and self.configuration()['print_enabled']:
                     try:
-                        p=subprocess.run(['lpstat','-p','S100_Festival'],capture_output=True,text=True,timeout=3)
+                        p=subprocess.run(['lpstat','-p',self.last_printer],capture_output=True,text=True,timeout=3)
                         if 'Waiting for printer' in p.stdout or 'disabled' in p.stdout:self.status='打印机离线，请开机；已有任务正在等待'
                         elif 'idle' in p.stdout:self.status='打印队列就绪 · 比 ✌ 再拍一张'
                     except (OSError,subprocess.TimeoutExpired):pass
                 continue
             folder=self.directory/(datetime.now(ZoneInfo('Asia/Shanghai')).strftime('%Y%m%d-%H%M%S')+'-'+uuid.uuid4().hex[:6]);folder.mkdir()
-            record={'state':'saving'}
+            record={'state':'saving','options':options}
             def journal():
                 temp=folder/'record.tmp';temp.write_text(json.dumps(record,ensure_ascii=False),encoding='utf-8');temp.replace(folder/'record.json')
             try:
                 photo=folder/'photo.jpg';Image.fromarray(rgb).save(photo,quality=96,subsampling=0)
-                self.history=(self.history+[photo])[-12:];self.notify(photo)
+                self.history=(self.history+[photo])[-100:];self.notify(photo)
                 pdf=folder/'newspaper.pdf';newspaper(photo,pdf)
-                record['state']='submitting';journal()
-                record['job']=submit_print(pdf);self.last_job=record['job'];record['state']='submitted';journal()
-                self.status='照片已保存，报纸已提交打印'
+                record['state']='submitting' if options['print_enabled'] else 'generating_pdf';journal()
+                record.update(dispatch_output(pdf,options));journal()
+                if record['state']=='submitted':
+                    self.last_job=record['job'];self.last_printer=record['printer'];self.status='照片已保存，报纸已提交打印'
+                else:self.status='照片和报纸 PDF 已保存，未打印'
             except Exception as error:
                 record.update(state='needs_attention',error=str(error));journal()
                 self.status='照片已保存；打印异常，请检查打印机';print('FESTIVAL_ERROR',str(error),flush=True)

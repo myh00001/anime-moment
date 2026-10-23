@@ -18,6 +18,8 @@ local-models/
 service/local-display-*.json
 service/display-settings.json
 service/display-settings.json.tmp
+service/festival-settings.json
+service/festival-settings.json.tmp
 config-backup/
 samples/
 captures/

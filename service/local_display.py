@@ -4,6 +4,7 @@ import sys,threading,time,json,re,subprocess,urllib.request
 from collections import deque
 from resource_monitor import ResourceMonitor,corner_action
 from display_settings import DEFAULT_SETTINGS,load_settings,save_settings,cover_geometry,output_dimensions
+from festival_settings import load_options,save_options,wall_geometry,list_printers
 ROOT=Path(__file__).resolve().parent
 sys.path.insert(0,str(ROOT/'vendor'))
 import cv2,numpy as np,gi
@@ -16,6 +17,7 @@ class Player:
  def __init__(self,start_workers=True):
   self.lock=threading.Lock();self.latest=None;self.sequence=0;self.result=None;self.message='等待 USB 摄像头接入…';self.running=True;self.capture_info={};self.painted=None;self.paint_size=None;self.heartbeat=0
   self.settings=load_settings(ROOT/'display-settings.json')
+  self.festival_settings=load_options(ROOT/'festival-settings.json')
   self.window=Gtk.Window(title='S100 实时动漫相机');self.window.set_default_size(1280,720)
   self.window.connect('destroy',self.close);self.window.connect('key-press-event',self.key)
   self.window.connect('window-state-event',self.window_state)
@@ -25,11 +27,11 @@ class Player:
   css=Gtk.CssProvider();css.load_from_data(b'window {background: black;} label {color: white; font-size: 28px;}')
   Gtk.StyleContext.add_provider_for_screen(Gdk.Screen.get_default(),css,Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
   self.box=Gtk.Box(orientation=Gtk.Orientation.VERTICAL);self.image=Gtk.DrawingArea();self.image.set_size_request(1,1);self.image.connect('draw',self.draw_frame);self.pixbuf=None;self.label=Gtk.Label(label=self.message)
-  self.festival=None;self.countdown='';self.gallery_paths=[]
+  self.festival=None;self.countdown='';self.gallery_paths=[];self.gallery_cache={};self.wall_size=None;self.wall_pending=False
   self.content=Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL,spacing=8);self.content.pack_start(self.image,True,True,0)
   self.sidebar=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=8);self.sidebar.set_size_request(235,1)
-  self.gallery=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=10)
-  self.gallery_scroll=Gtk.ScrolledWindow();self.gallery_scroll.set_policy(Gtk.PolicyType.NEVER,Gtk.PolicyType.AUTOMATIC);self.gallery_scroll.add(self.gallery);self.sidebar.pack_start(self.gallery_scroll,True,True,0)
+  self.gallery=Gtk.DrawingArea();self.gallery.set_size_request(1,1);self.gallery.connect('draw',self.draw_gallery);self.sidebar.pack_start(self.gallery,True,True,0)
+  self.content.connect('size-allocate',self.schedule_wall_layout)
   self.content.pack_end(self.sidebar,False,False,6);self.box.pack_start(self.content,True,True,0);self.box.pack_end(self.label,False,False,12)
   self.overlay=Gtk.Overlay();self.overlay.add(self.box)
   self.panel=Gtk.EventBox();self.panel.set_halign(Gtk.Align.START);self.panel.set_valign(Gtk.Align.START);self.panel.set_margin_start(18);self.panel.set_margin_top(18)
@@ -39,6 +41,7 @@ class Player:
   self.window.connect('size-allocate',lambda *_:GLib.idle_add(self.resize_panel))
   self.info=Gtk.DrawingArea();self.info.set_size_request(480,360);self.info.connect('draw',self.draw_info);self.info_text='';self.panel_content.pack_start(self.info,False,False,0)
   self.build_settings()
+  self.build_festival_settings()
   panel_css=Gtk.CssProvider();panel_css.load_from_data(b'eventbox {background-color: transparent;border-radius:12px;} #camera-settings label {color:white;font-size:17px;} #camera-settings button,#camera-settings entry,#camera-settings spinbutton {background-image:none;background-color:rgba(25,30,40,0.92);color:white;font-size:17px;}')
   self.panel.get_style_context().add_provider(panel_css,Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);self.info.get_style_context().add_provider(panel_css,Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
   self.panel_content.get_style_context().add_provider(panel_css,Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
@@ -49,7 +52,7 @@ class Player:
    from festival import Festival
    def latest_for_gesture():
     with self.lock:return self.sequence,self.latest
-   self.festival=Festival(latest_for_gesture,lambda photo:GLib.idle_add(self.add_photo,photo),lambda:self.running)
+   self.festival=Festival(latest_for_gesture,lambda photo:GLib.idle_add(self.add_photo,photo),lambda:self.running,configuration=lambda:dict(self.festival_settings))
    for photo in self.festival.history:self.add_photo(photo)
    self.window.fullscreen()
    self.capture_thread=threading.Thread(target=self.capture,daemon=True);self.capture_thread.start();self.processing_thread=threading.Thread(target=self.process,daemon=True);self.processing_thread.start();GLib.timeout_add(40,self.paint)
@@ -64,18 +67,70 @@ class Player:
   self.running=False
   if Gtk.main_level()>0:Gtk.main_quit()
  def add_photo(self,photo):
-  self.gallery_paths=(self.gallery_paths+[photo])[-8:]
-  for child in self.gallery.get_children():self.gallery.remove(child)
-  for path in self.gallery_paths:
-   try:
-    thumb=GdkPixbuf.Pixbuf.new_from_file_at_scale(str(path),220,155,True)
-    self.gallery.pack_start(Gtk.Image.new_from_pixbuf(thumb),False,False,0)
-   except Exception as error:print('GALLERY',str(error),flush=True)
-  self.gallery.show_all()
-  GLib.idle_add(self.scroll_photos)
+  photo=Path(photo);self.gallery_paths=([photo]+[p for p in self.gallery_paths if p!=photo])[:100]
+  self.schedule_wall_layout();self.gallery.queue_draw()
   return False
- def scroll_photos(self):
-  adj=self.gallery_scroll.get_vadjustment();adj.set_value(max(adj.get_lower(),adj.get_upper()-adj.get_page_size()));return False
+ def schedule_wall_layout(self,*_):
+  if not self.wall_pending:self.wall_pending=True;GLib.idle_add(self.layout_wall)
+ def gallery_geometry(self):
+  aspect=16/9
+  if self.gallery_paths:
+   try:
+    info=GdkPixbuf.Pixbuf.get_file_info(str(self.gallery_paths[0]));aspect=info[1]/max(1,info[2])
+   except Exception:pass
+  return wall_geometry(self.content.get_allocated_width(),self.content.get_allocated_height(),self.festival_settings['gallery_count'],aspect)
+ def layout_wall(self):
+  self.wall_pending=False;geometry=self.gallery_geometry()
+  if self.wall_size!=geometry['width']:self.wall_size=geometry['width'];self.sidebar.set_size_request(self.wall_size,1)
+  self.gallery.queue_draw()
+  if hasattr(self,'festival_note'):
+   self.festival_note.set_text(f"当前最多 {geometry['count']} 张，照片墙宽 {geometry['width']} 像素；新照片在上。")
+  return False
+ def draw_gallery(self,widget,context):
+  geometry=self.gallery_geometry();width=widget.get_allocated_width();height=widget.get_allocated_height()
+  context.set_source_rgb(0,0,0);context.paint()
+  visible=self.gallery_paths[:geometry['count']]
+  for path in list(self.gallery_cache):
+   if path not in visible:del self.gallery_cache[path]
+  for index,path in enumerate(visible):
+   top=index*(geometry['row_height']+geometry['gap']);row=min(geometry['row_height'],height-top)
+   if row<=0:break
+   try:
+    if path not in self.gallery_cache:self.gallery_cache[path]=GdkPixbuf.Pixbuf.new_from_file_at_scale(str(path),900,900,True)
+    pixbuf=self.gallery_cache[path];w=pixbuf.get_width();h=pixbuf.get_height();scale=min(width/w,row/h)
+    context.save();context.rectangle(0,top,width,row);context.clip();context.translate((width-w*scale)/2,top+(row-h*scale)/2);context.scale(scale,scale)
+    Gdk.cairo_set_source_pixbuf(context,pixbuf,0,0);context.paint();context.restore()
+   except Exception as error:print('GALLERY',str(error),flush=True)
+  return False
+ def build_festival_settings(self):
+  self.festival_expander=Gtk.Expander(label='照片墙与打印');self.festival_expander.set_margin_start(18);self.festival_expander.set_margin_end(18);self.festival_expander.set_margin_bottom(14)
+  grid=Gtk.Grid(column_spacing=10,row_spacing=10);grid.set_margin_top(12);self.festival_expander.add(grid);self.panel_content.pack_start(self.festival_expander,False,False,0)
+  self.photo_count=Gtk.SpinButton.new_with_range(0,20,1);self.photo_count.set_numeric(True);self.photo_count.set_value(self.festival_settings['gallery_count'])
+  grid.attach(Gtk.Label(label='照片数量',xalign=0),0,0,1,1);grid.attach(self.photo_count,1,0,1,1);grid.attach(Gtk.Label(label='0 = 自动容纳'),2,0,1,1)
+  self.pdf_only=Gtk.CheckButton(label='只生成 PDF，不打印');self.pdf_only.set_active(not self.festival_settings['print_enabled']);grid.attach(self.pdf_only,0,1,3,1)
+  self.printer_choice=Gtk.ComboBoxText();self.printer_choice.append(self.festival_settings['printer'],self.festival_settings['printer']);self.printer_choice.set_active_id(self.festival_settings['printer'])
+  grid.attach(Gtk.Label(label='打印机',xalign=0),0,2,1,1);grid.attach(self.printer_choice,1,2,2,1)
+  refresh=Gtk.Button(label='刷新打印机');refresh.connect('clicked',lambda *_:self.refresh_printers());grid.attach(refresh,0,3,1,1)
+  apply=Gtk.Button(label='应用并保存');apply.connect('clicked',self.apply_festival_settings);grid.attach(apply,1,3,2,1)
+  self.festival_note=Gtk.Label(label='照片墙宽度随数量和屏幕尺寸调整。',xalign=0);self.festival_note.set_line_wrap(True);self.festival_note.set_max_width_chars(35);grid.attach(self.festival_note,0,4,3,1)
+  self.print_note=Gtk.Label(label='');self.print_note.set_line_wrap(True);self.print_note.set_max_width_chars(35);self.print_note.set_xalign(0);grid.attach(self.print_note,0,5,3,1)
+  self.pdf_only.connect('toggled',lambda button:self.printer_choice.set_sensitive(not button.get_active()));self.printer_choice.set_sensitive(not self.pdf_only.get_active())
+  self.festival_expander.connect('notify::expanded',lambda *_:GLib.idle_add(self.resize_panel))
+  self.refresh_printers()
+ def refresh_printers(self):
+  def worker():GLib.idle_add(self.populate_printers,list_printers())
+  threading.Thread(target=worker,daemon=True).start()
+ def populate_printers(self,names):
+  selected=self.printer_choice.get_active_id() or self.festival_settings['printer']
+  self.printer_choice.remove_all()
+  for name in sorted(set(names+[selected])):self.printer_choice.append(name,name if name in names else name+'（未发现）')
+  self.printer_choice.set_active_id(selected);return False
+ def apply_festival_settings(self,*_):
+  value={'gallery_count':self.photo_count.get_value_as_int(),'print_enabled':not self.pdf_only.get_active(),'printer':self.printer_choice.get_active_id() or self.festival_settings['printer']}
+  try:
+   self.festival_settings=save_options(ROOT/'festival-settings.json',value);self.schedule_wall_layout()
+   self.print_note.set_text('设置已保存；下一张照片仅保存 PDF。' if not value['print_enabled'] else '设置已保存；下一张使用 '+value['printer']+' 打印。')
+  except (ValueError,OSError) as error:self.print_note.set_text('设置未保存：'+str(error))
  def build_settings(self):
   self.settings_expander=Gtk.Expander(label='画面设置');self.settings_expander.set_margin_start(18);self.settings_expander.set_margin_end(18);self.settings_expander.set_margin_bottom(14)
   grid=Gtk.Grid(column_spacing=10,row_spacing=10);grid.set_margin_top(12);self.settings_expander.add(grid);self.panel_content.pack_start(self.settings_expander,False,False,0)
@@ -233,6 +288,7 @@ class Player:
   if self.festival:
    countdown=self.festival.tick()
    if countdown!=self.countdown:self.countdown=countdown;self.image.queue_draw()
+   self.print_note.set_text(self.festival.status)
   self.label.set_text(self.message);self.label.set_visible(bool(self.message))
   if time.monotonic()-self.heartbeat>2:
    self.heartbeat=time.monotonic();(ROOT/'local-display-heartbeat.json').write_text(json.dumps({'message':self.message,'camera':self.capture_info,'has_output':self.result is not None,'time':time.time()}))
