@@ -41,19 +41,22 @@ def newspaper(photo, target, captured=None, weather=None):
     from reportlab.lib.units import mm
     from reportlab.lib.utils import ImageReader
     from PIL import Image
-    fonts=[os.environ.get('FESTIVAL_FONT',''),'/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc','C:/Windows/Fonts/msyh.ttc']
+    fonts=[os.environ.get('FESTIVAL_FONT',''),str(ROOT/'assets/fonts/msyh.ttc'),'C:/Windows/Fonts/msyh.ttc']
     font=next((p for p in fonts if p and Path(p).is_file()),None)
-    if not font:raise RuntimeError('请安装中文字体 fonts-wqy-zenhei')
+    bold_fonts=[os.environ.get('FESTIVAL_BOLD_FONT',''),str(ROOT/'assets/fonts/msyhbd.ttc'),'C:/Windows/Fonts/msyhbd.ttc']
+    bold_font=next((p for p in bold_fonts if p and Path(p).is_file()),None)
+    if not font or not bold_font:raise RuntimeError('请配置微软雅黑常规及粗体字体 msyh.ttc / msyhbd.ttc')
     if 'FestivalChinese' not in pdfmetrics.getRegisteredFontNames():pdfmetrics.registerFont(TTFont('FestivalChinese',font))
+    if 'FestivalChineseBold' not in pdfmetrics.getRegisteredFontNames():pdfmetrics.registerFont(TTFont('FestivalChineseBold',bold_font))
     width,height=148*mm,210*mm
-    c=canvas.Canvas(str(target),pagesize=(width,height));c.setTitle('北京市第65中学2026年校园科技节')
+    c=canvas.Canvas(str(target),pagesize=(width,height),initialFontName='FestivalChinese');c.setTitle('北京市第65中学2026年校园科技节')
     c.setFillColorRGB(1,1,1);c.rect(0,0,width,height,fill=1,stroke=0)
     c.setFillColorRGB(0,0,0);c.setStrokeColorRGB(0,0,0)
     def text(x,y,s,size,font='FestivalChinese',align='left',bold=False):
+        font='FestivalChineseBold' if bold or font in ('Helvetica-Bold','FestivalChineseBold') else 'FestivalChinese'
         c.setFont(font,size)
         method={'left':c.drawString,'center':c.drawCentredString,'right':c.drawRightString}[align]
         method(x*mm,y*mm,s)
-        if bold:method(x*mm+.24,y*mm,s)
     def rule(y,weight=.5):c.setLineWidth(weight);c.line(8*mm,y*mm,140*mm,y*mm)
     def reverse_label(x,y,w,label,size=13):
         c.setFillColorRGB(.55,.55,.55);c.rect(x*mm,(y-1.8)*mm,w*mm,7.5*mm,fill=1,stroke=0)

@@ -22,6 +22,7 @@ service/festival-settings.json
 service/festival-settings.json.tmp
 service/weather-cache.json
 service/weather-cache.json.tmp
+service/assets/fonts/
 config-backup/
 samples/
 captures/
