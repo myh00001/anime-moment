@@ -299,6 +299,8 @@ class Player:
       (ROOT/'local-display-status.json').write_text(json.dumps(status,indent=2));print('DISPLAY',json.dumps(status),flush=True)
    except Exception as e:self.message='正在恢复推理进程…';print('INFERENCE',str(e),flush=True);time.sleep(1)
  def paint(self):
+  slide=int(time.monotonic()/6)
+  if getattr(self,'banner_slide',None)!=slide:self.banner_slide=slide;self.banner.queue_draw()
   if self.festival:
    countdown=self.festival.tick()
    if countdown!=self.countdown:self.countdown=countdown;self.image.queue_draw();self.banner.queue_draw()

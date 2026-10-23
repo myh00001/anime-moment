@@ -134,7 +134,8 @@ def newspaper(photo, target, captured=None, weather=None):
         for index,line in enumerate(rows):
             text(x,footer-8-index*5.3,line,10.5)
     rule(16,.6)
-    text(74,10,'第六十五中学 · 在体验中学习，在实践中创新',8.5,align='center')
+    text(74,11,'北京市第六十五中学2026年校园科技节',8.5,align='center')
+    text(74,6,'在体验中学习，在实践中创新',7.5,align='center')
     c.showPage();c.save()
 
 def submit_print(pdf, runner=subprocess.run, printer='S100_Festival'):

@@ -4,6 +4,13 @@ import gi
 gi.require_version('Pango','1.0');gi.require_version('PangoCairo','1.0');gi.require_version('Gdk','3.0')
 from gi.repository import Pango,PangoCairo,Gdk
 
+MESSAGES=(
+    ('比出 ✌，3 秒后自动拍照','看见倒计时后，可以放下手势'),
+    ('让此刻，成为动漫主角','看向上方镜头，留下你的科技节瞬间'),
+    ('把科技节的快乐带回家','拍照后自动生成专属纪念报纸'),
+    ('一个手势，定格你的精彩','举起食指和中指，试试 V 字手势'),
+)
+
 def draw_banner(c,width,height,emblem=None,remaining=None,now=0):
     c.save();c.rectangle(0,0,width,height);c.clip()
     c.set_source_rgb(.045,.075,.095);c.paint()
@@ -39,6 +46,10 @@ def draw_banner(c,width,height,emblem=None,remaining=None,now=0):
         label('北京市第六十五中学 · 2026年校园科技节',x,height*.23,21,True,color=(.68,.86,.82))
         label('做中学科学  实践促创新',x,height*.53,37,True)
         label('漫像时刻 — AI 动漫拍报机',x,height*.81,20)
-        label('RDK S100',width-margin,height*.43,25,True,'right',(.64,.93,.85))
-        label('实时动漫 · 手势拍照 · 纪念报纸',width-margin,height*.70,13,False,'right',(.72,.79,.81))
+        index=int(now/6)%len(MESSAGES);headline,detail=MESSAGES[index]
+        label(headline,width-margin,height*.39,23,True,'right',(.64,.93,.85))
+        label(detail,width-margin,height*.66,14,False,'right',(.78,.84,.85))
+        for i in range(len(MESSAGES)):
+            c.set_source_rgba(.64,.93,.85,1 if i==index else .22)
+            c.arc(width-margin-(len(MESSAGES)-1-i)*13*scale,height*.85,2.5*scale,0,2*math.pi);c.fill()
     c.restore()
