@@ -18,6 +18,8 @@ python3 scripts/configure_network_printer.py --host <打印机IPv4地址>
 
 ## 使用
 
+**M452nw横放A5纸的关键设置**：打印机内置网页“打印”页面的“A5进纸方向”必须选择“横向”（内部字段 `A5FeedOrientation=Landscape`），并点击应用。该选项决定实际进纸长短边，不能用CUPS的文档横/竖方向代替。报纸PDF和CUPS文档方向保持竖版（`orientation-requested=3`）。现场已回读确认进纸方向保存为横向；此前仅修改CUPS方向不能解决纸张提前走完、下半截缺失的问题。
+
 打印机先开机并放置A5纸。比出✌并保持约半秒，倒计时3秒后拍摄新的动漫画面。放下手约一秒后才能再次触发，保持同一手势不会连续打印。按钮和空格也能触发。照片不包含倒计时、照片墙或信息面板。
 
 每次拍照生成一张A5竖版PDF，包含学校提供的校徽、指定标题、日期和照片。照片墙按时间从上往下排列、显示最近8张、自动向下滚动，照片和PDF在本地 `service/captures/<时间-编号>/` 保存。目录不进入Git。`record.json` 保存打印提交结果；断电或提交结果不明时不自动重复提交。正常提交后的离线作业由CUPS等待打印机恢复，无须再次拍照。
@@ -39,9 +41,9 @@ python3 scripts/configure_network_printer.py --host <打印机IPv4地址>
 
 ```sh
 sudo lpadmin -p S100_Festival -E -v '<实际USB URI>' -m '<实际M452 PostScript驱动ID>'
-sudo lpadmin -p S100_Festival -o media-default=iso_a5_148x210mm -o orientation-requested-default=4 -o sides-default=one-sided -o HPPJLColorAsGray-default=off -o print-color-mode-default=color -o printer-is-shared=false
+sudo lpadmin -p S100_Festival -o media-default=iso_a5_148x210mm -o orientation-requested-default=3 -o sides-default=one-sided -o HPPJLColorAsGray-default=off -o print-color-mode-default=color -o printer-is-shared=false
 ```
 
-程序每次用 `lp -d S100_Festival -n 1` 显式指定A5、横向纸张、单面和彩色（PDF内容保持竖版）。纸盒中的物理放纸方向与PDF页面方向是两件事，纸盒纸型必须设置为A5。断电或拔线时已有任务等待重连，不要重复发送同一照片。
+程序每次用 `lp -d S100_Festival -n 1` 显式指定A5、竖版文档、单面和彩色。纸盒中的物理放纸方向与PDF页面方向是两件事，纸盒纸型必须设置为A5。断电或拔线时已有任务等待重连，不要重复发送同一照片。
 
 现场测试可以向正在运行的显示进程发送一次SIGUSR1，走同一个倒计时/拍摄/打印流程；该信号仅为本地管理员测试入口。开机启动和手动关闭后不重开的策略未改。
