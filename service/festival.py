@@ -58,8 +58,8 @@ def newspaper(photo, target, captured=None, weather=None):
         method={'left':c.drawString,'center':c.drawCentredString,'right':c.drawRightString}[align]
         method(x*mm,y*mm,s)
     def rule(y,weight=.5):c.setLineWidth(weight);c.line(8*mm,y*mm,140*mm,y*mm)
-    def reverse_label(x,y,w,label,size=13):
-        c.setFillColorRGB(.55,.55,.55);c.rect(x*mm,(y-1.8)*mm,w*mm,7.5*mm,fill=1,stroke=0)
+    def reverse_label(x,y,w,label,size=12):
+        c.setFillColorRGB(.55,.55,.55);c.rect(x*mm,(y-1.4)*mm,w*mm,6.5*mm,fill=1,stroke=0)
         c.setFillColorRGB(1,1,1);text(x+3,y,label,size,bold=True);c.setFillColorRGB(0,0,0)
     def wrap(value,size,limit):
         rows=[];line=''
@@ -71,11 +71,11 @@ def newspaper(photo, target, captured=None, weather=None):
         if line:rows.append(line)
         return rows
     c.drawImage(str(ROOT/'assets/school-emblem.png'),7*mm,179*mm,25*mm,25*mm,preserveAspectRatio=True,anchor='c',mask='auto')
-    text(35,192,'漫像时刻',34,bold=True)
-    text(35,185,'AI 动漫拍报机',12,bold=True)
-    text(35,179,'北京市第65中学2026年校园科技节',10.5)
-    text(140,196,'2026',17,font='Helvetica-Bold',align='right')
-    text(140,187,'校园纪念刊',10.5,align='right')
+    text(35,194,'漫像时刻',24,bold=True)
+    text(35,187,'AI 动漫拍报机',10.5)
+    text(35,181,'北京市第65中学2026年校园科技节',10)
+    text(140,196,'2026',14,font='Helvetica-Bold',align='right')
+    text(140,188,'校园纪念刊',9.5,align='right')
     rule(177,1)
     when=captured or datetime.now(ZoneInfo('Asia/Shanghai'))
     text(8,172,when.strftime('%Y.%m.%d  %H:%M:%S'),10)
@@ -88,9 +88,9 @@ def newspaper(photo, target, captured=None, weather=None):
     text(group_left,172,'北京',10)
     draw_weather_icon(c,(group_left+city_width+gap)*mm,171.7*mm,icon_size*mm,int(weather['code']) if available else None)
     text(140,172,temperature,10,align='right')
-    c.setFillColorRGB(.55,.55,.55);c.rect(8*mm,153*mm,132*mm,12*mm,fill=1,stroke=0);c.setFillColorRGB(1,1,1)
-    text(74,156.5,'做中学科学 实践促创新',24,align='center',bold=True);c.setFillColorRGB(0,0,0)
-    text(74,147,'用一次亲身体验，留下今天的科技记忆',11.5,align='center')
+    c.setFillColorRGB(.55,.55,.55);c.rect(8*mm,155*mm,132*mm,10*mm,fill=1,stroke=0);c.setFillColorRGB(1,1,1)
+    text(74,158,'做中学科学 实践促创新',22,align='center',bold=True);c.setFillColorRGB(0,0,0)
+    text(74,147,'用一次亲身体验，留下今天的科技记忆',10.5,align='center')
     left=['基于 RDK S100，将摄像头画面','实时转化为动漫风格。比出 V 手势，','即可倒计时拍照，并自动生成、','打印专属科技节纪念报纸。']
     right=['看见 AI 的实时创作，','用一个手势留下此刻，','让科技节的体验与回忆，','成为一份可以带走的纪念。']
     columns=[(x,[row for part in paragraph for row in wrap(part,10.5,limit)]) for x,paragraph,limit in [(8,left,62),(79,right,61)]]
@@ -98,9 +98,8 @@ def newspaper(photo, target, captured=None, weather=None):
     image=Image.open(photo).convert('RGB');photo_height=min(140-footer_min-13,132*image.height/max(1,image.width));bottom=140-photo_height
     box=(8*mm,bottom*mm,132*mm,photo_height*mm)
     c.drawImage(ImageReader(image),*box,preserveAspectRatio=True,anchor='c')
-    text(8,bottom-4.5,'现场影像 / 人工智能动漫照相馆',9)
-    text(140,bottom-4.5,'校园科技节 · 专属留念',9,align='right')
-    rule(bottom-8,.4)
+    text(8,bottom-4.5,'镜头里的科技节',9)
+    text(140,bottom-4.5,'AI 动漫留念',8.5,align='right')
     footer=bottom-13
     reverse_label(8,footer,62,'作品说明')
     reverse_label(79,footer,61,'可看 · 可玩 · 可带走')
