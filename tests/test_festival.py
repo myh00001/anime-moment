@@ -5,6 +5,12 @@ from festival import GestureLatch,submit_print,victory,Festival,gesture_regions
 import numpy as np,threading,queue
 
 class FestivalTests(unittest.TestCase):
+ def test_global_scan_reaches_all_corners_first(self):
+  for w,h in [(1920,1080),(1080,1920)]:
+   regions=gesture_regions(w,h)
+   self.assertEqual(len(regions),len(set(regions)))
+   for x,y in [(0,0),(w-1,0),(0,h-1),(w-1,h-1)]:
+    self.assertTrue(any(a<=x<c and b<=y<d for a,b,c,d in regions[:4]))
  def test_distant_hand_windows_cover_landscape_and_portrait(self):
   for width,height in [(1920,1080),(1080,1920),(640,480)]:
    covered=np.zeros((height,width),dtype=bool)

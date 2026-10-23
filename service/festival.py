@@ -17,7 +17,17 @@ def gesture_regions(width, height):
     xs=np.linspace(0,max(0,width-side),int(math.ceil(max(0,width-side)/stride))+1).astype(int)
     ys=np.linspace(0,max(0,height-side),int(math.ceil(max(0,height-side)/stride))+1).astype(int)
     regions=[(int(x),int(y),int(x)+side,int(y)+side) for y in ys for x in xs]
-    return sorted(regions,key=lambda r:((r[0]+r[2])/2-width/2)**2+((r[1]+r[3])/2-height/2)**2)
+    # Spread consecutive searches across the entire image, including corners.
+    # Every window appears exactly once per sweep; there is no central priority.
+    ordered=[]
+    for x,y in [(0,0),(width-side,height-side),(width-side,0),(0,height-side)]:
+        corner=(x,y,x+side,y+side)
+        if corner in regions:ordered.append(corner);regions.remove(corner)
+    while regions:
+        index=max(range(len(regions)),key=lambda i:min(
+            (regions[i][0]-r[0])**2+(regions[i][1]-r[1])**2 for r in ordered))
+        ordered.append(regions.pop(index))
+    return ordered
 
 def victory(points):
     """Rotation-independent finger extension, rejecting fists and open palms."""
@@ -166,14 +176,15 @@ class Festival:
             from festival_vendor.mp_handpose import MPHandPose
             palm=MPPalmDet(str(ROOT/'models/palm_detection_mediapipe_2023feb.onnx'),scoreThreshold=.50,topK=32)
             hand=MPHandPose(str(ROOT/'models/handpose_estimation_mediapipe_2023feb.onnx'),confThreshold=.65)
-            latch=GestureLatch();last=-1;region_index=0;locked_region=None
+            latch=GestureLatch();last=-1;region_index=0;locked_region=None;region_shape=None
             while self.running():
                 start=time.monotonic();seq,frame=self.latest()
                 if frame is not None and seq!=last:
                     last=seq;h,w=frame.shape[:2]
                     detected=False
                     try:
-                        regions=gesture_regions(w,h)
+                        if region_shape!=(w,h):
+                            regions=gesture_regions(w,h);region_shape=(w,h);region_index=0;locked_region=None
                         candidates=[]
                         if locked_region in regions:candidates.append(locked_region)
                         candidates.append(None)  # Full frame preserves close-range detection.
