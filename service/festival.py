@@ -46,7 +46,7 @@ class GestureLatch:
             self.absent=None
             if self.since is None or self.last_hit is None or now-self.last_hit>.65:self.since=now
             self.last_hit=now
-            if self.armed and now-self.since >= .5:
+            if self.armed and now-self.since >= .3:
                 self.armed=False;return True
         else:
             if self.last_hit is None or now-self.last_hit>.65:self.since=None

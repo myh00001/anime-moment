@@ -5,12 +5,12 @@ from festival import GestureLatch,submit_print,victory,Festival,gesture_regions
 import numpy as np,threading,queue
 
 class FestivalTests(unittest.TestCase):
- def test_half_second_confirmation_tolerates_one_missed_sample(self):
+ def test_confirmation_tolerates_one_missed_sample(self):
   latch=GestureLatch()
   self.assertFalse(latch.update(True,0))
   self.assertFalse(latch.update(False,.18))
-  self.assertFalse(latch.update(True,.36))
-  self.assertTrue(latch.update(True,.54))
+  self.assertTrue(latch.update(True,.36))
+  self.assertFalse(latch.update(True,.54))
  def test_long_gap_restarts_confirmation(self):
   latch=GestureLatch()
   self.assertFalse(latch.update(True,0))
@@ -18,12 +18,12 @@ class FestivalTests(unittest.TestCase):
   self.assertFalse(latch.update(True,1))
   self.assertFalse(latch.update(True,1.2))
   self.assertTrue(latch.update(True,1.5))
- def test_continuous_half_second_required(self):
+ def test_point_three_second_confirmation_required(self):
   latch=GestureLatch()
   self.assertFalse(latch.update(True,0))
-  self.assertFalse(latch.update(True,.3))
-  self.assertFalse(latch.update(True,.49))
-  self.assertTrue(latch.update(True,.5))
+  self.assertFalse(latch.update(True,.18))
+  self.assertFalse(latch.update(True,.29))
+  self.assertTrue(latch.update(True,.3))
   self.assertFalse(latch.update(True,.8))
  def test_brief_dropout_cannot_rearm_shutter(self):
   latch=GestureLatch()
