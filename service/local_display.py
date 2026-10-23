@@ -28,15 +28,8 @@ class Player:
   self.festival=None;self.countdown='';self.gallery_paths=[]
   self.content=Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL,spacing=8);self.content.pack_start(self.image,True,True,0)
   self.sidebar=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=8);self.sidebar.set_size_request(235,1)
-  title=Gtk.Label(label='科技节 · 照片墙');self.sidebar.pack_start(title,False,False,10)
   self.gallery=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=10)
   self.gallery_scroll=Gtk.ScrolledWindow();self.gallery_scroll.set_policy(Gtk.PolicyType.NEVER,Gtk.PolicyType.AUTOMATIC);self.gallery_scroll.add(self.gallery);self.sidebar.pack_start(self.gallery_scroll,True,True,0)
-  self.festival_note=Gtk.Label(label='比 ✌ 保持片刻\n3 秒后自动拍照打印');self.festival_note.set_line_wrap(True);self.sidebar.pack_start(self.festival_note,False,False,8)
-  self.festival_note.set_max_width_chars(16)
-  self.sidebar.set_name('festival-sidebar')
-  festival_css=Gtk.CssProvider();festival_css.load_from_data(b'#festival-sidebar label {font-size:18px;} #festival-sidebar button {font-size:16px;color:#151b22;background-image:none;background-color:#f4f4f4;}')
-  Gtk.StyleContext.add_provider_for_screen(Gdk.Screen.get_default(),festival_css,Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
-  shutter=Gtk.Button(label='拍照 · 3 秒倒计时');shutter.connect('clicked',lambda *_:self.festival and self.festival.trigger());self.sidebar.pack_start(shutter,False,False,10)
   self.content.pack_end(self.sidebar,False,False,6);self.box.pack_start(self.content,True,True,0);self.box.pack_end(self.label,False,False,12)
   self.overlay=Gtk.Overlay();self.overlay.add(self.box)
   self.panel=Gtk.EventBox();self.panel.set_halign(Gtk.Align.START);self.panel.set_valign(Gtk.Align.START);self.panel.set_margin_start(18);self.panel.set_margin_top(18)
@@ -240,7 +233,6 @@ class Player:
   if self.festival:
    countdown=self.festival.tick()
    if countdown!=self.countdown:self.countdown=countdown;self.image.queue_draw()
-   self.festival_note.set_text(self.festival.status)
   self.label.set_text(self.message);self.label.set_visible(bool(self.message))
   if time.monotonic()-self.heartbeat>2:
    self.heartbeat=time.monotonic();(ROOT/'local-display-heartbeat.json').write_text(json.dumps({'message':self.message,'camera':self.capture_info,'has_output':self.result is not None,'time':time.time()}))
