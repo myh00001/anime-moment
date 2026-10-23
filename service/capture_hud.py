@@ -5,7 +5,7 @@ gi.require_version('Pango','1.0')
 gi.require_version('PangoCairo','1.0')
 from gi.repository import Pango,PangoCairo
 
-def draw_capture_hud(c,width,height,remaining=None,shot_age=None,waiting=False):
+def draw_capture_hud(c,width,height,remaining=None,shot_age=None,waiting=False,pickup_age=None):
     scale=min(width/1280,height/720)*1.3
     if scale<=0:return
     c.save();c.translate(width/2,height/2);c.scale(scale,scale)
@@ -48,4 +48,11 @@ def draw_capture_hud(c,width,height,remaining=None,shot_age=None,waiting=False):
             c.set_source_rgba(.64,.93,.85,alpha);c.set_line_width(2.5)
             c.move_to(-72,-229);c.line_to(-67,-224);c.line_to(-57,-234);c.stroke()
             text('拍摄完成',-228,19,True,alpha)
+    if pickup_age is not None and 0<=pickup_age<8 and remaining is None and not waiting:
+        alpha=min(1,pickup_age/.2,(8-pickup_age)/.6)
+        c.set_source_rgba(.025,.04,.055,.88*alpha)
+        c.new_sub_path();c.arc(-230,191,18,math.pi,1.5*math.pi);c.arc(230,191,18,1.5*math.pi,2*math.pi)
+        c.arc(230,241,18,0,.5*math.pi);c.arc(-230,241,18,.5*math.pi,math.pi);c.close_path();c.fill()
+        text('请到打印机处领取纪念报纸',202,26,True,alpha)
+        text('报纸已提交打印，请稍候领取',236,16,False,.82*alpha)
     c.restore()

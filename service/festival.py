@@ -155,7 +155,7 @@ class Festival:
         self.latest=latest;self.notify=notify;self.running=running
         self.configuration=configuration
         self.weather=WeatherCache(ROOT/'weather-cache.json',running)
-        self.lock=threading.Lock();self.deadline=None;self.min_sequence=None;self.shutter_at=0
+        self.lock=threading.Lock();self.deadline=None;self.min_sequence=None;self.shutter_at=0;self.pickup_at=0
         self.status='比 ✌ 即可开始 3 秒拍照倒计时';self.jobs=queue.Queue(maxsize=2)
         self.directory=ROOT/'captures';self.directory.mkdir(exist_ok=True)
         self.history=sorted(self.directory.glob('*/photo.jpg'))[-100:]
@@ -251,6 +251,7 @@ class Festival:
                 record['state']='submitting' if options['print_enabled'] else 'generating_pdf';journal()
                 record.update(dispatch_output(pdf,options));journal()
                 if record['state']=='submitted':
+                    self.pickup_at=time.monotonic()
                     self.last_job=record['job'];self.last_printer=record['printer'];self.status='照片已保存，报纸已提交打印'
                 else:self.status='照片和报纸 PDF 已保存，未打印'
             except Exception as error:
