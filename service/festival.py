@@ -40,6 +40,14 @@ def victory(points):
     # requirement unchanged to distinguish a V sign from an open palm.
     return extended(5,-.10,1.02) and extended(9,-.10,1.02) and not extended(13) and not extended(17)
 
+def pose_victory(pose):
+    """Accept image-plane geometry when uncertain depth hides a visible V sign."""
+    if pose is None:return False
+    if victory(pose[67:130]):return True
+    points=np.asarray(pose[4:67],dtype=float).reshape(21,3).copy()
+    points[:,2]=0
+    return victory(points)
+
 class GestureLatch:
     def __init__(self):
         self.armed=True; self.absent=None
@@ -201,9 +209,12 @@ class Festival:
                                 scanned+=1;region_index=(region_index+1)%len(regions)
                             vh,vw=view.shape[:2];scale=min(1,640/max(vw,vh))
                             small=cv2.resize(view,(max(1,int(vw*scale)),max(1,int(vh*scale))))
-                            for row in sorted(palm.infer(small),key=lambda r:-r[-1])[:2]:
-                                pose=hand.infer(small,row)
-                                if pose is not None and victory(pose[67:130]):detected=True;break
+                            for row in sorted(palm.infer(small),key=lambda r:-r[-1])[:4]:
+                                # Palm search is small, but recover finger landmarks from
+                                # native pixels instead of the downsampled search image.
+                                native_row=row.copy();native_row[:18]/=scale
+                                pose=hand.infer(view,native_row)
+                                if pose_victory(pose):detected=True;break
                             if detected:
                                 locked_region=region;locked_until=time.monotonic()+.8;break
                             # Scan more small windows when affordable without allowing

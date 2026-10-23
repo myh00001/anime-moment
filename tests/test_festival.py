@@ -1,10 +1,21 @@
 import sys,unittest
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'service'))
-from festival import GestureLatch,submit_print,victory,Festival,gesture_regions
+from festival import GestureLatch,submit_print,victory,Festival,gesture_regions,pose_victory
 import numpy as np,threading,queue
 
 class FestivalTests(unittest.TestCase):
+ def test_visible_v_survives_incorrect_depth_prediction(self):
+  p=np.zeros((21,3))
+  for base,x in [(5,-1.5),(9,-.5),(13,.5),(17,1.5)]:
+   for joint in range(4):p[base+joint]=[x,-2-joint,0]
+  for base in [13,17]:p[base+3]=[p[base,0],-1,0]
+  pose=np.zeros(132);pose[4:67]=p.reshape(-1)
+  self.assertTrue(pose_victory(pose))
+  for base in [13,17]:p[base+3]=[p[base,0],-5,0]
+  pose[4:67]=p.reshape(-1)
+  self.assertFalse(pose_victory(pose))
+  self.assertFalse(pose_victory(None))
  def test_bent_v_fingers_are_accepted_but_folded_fingers_are_not(self):
   p=np.zeros((21,3))
   for base,x in [(5,-1.5),(9,-.5),(13,.5),(17,1.5)]:
