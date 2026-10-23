@@ -5,6 +5,19 @@ from festival import GestureLatch,submit_print,victory,Festival,gesture_regions
 import numpy as np,threading,queue
 
 class FestivalTests(unittest.TestCase):
+ def test_half_second_confirmation_tolerates_one_missed_sample(self):
+  latch=GestureLatch()
+  self.assertFalse(latch.update(True,0))
+  self.assertFalse(latch.update(False,.18))
+  self.assertFalse(latch.update(True,.36))
+  self.assertTrue(latch.update(True,.54))
+ def test_long_gap_restarts_confirmation(self):
+  latch=GestureLatch()
+  self.assertFalse(latch.update(True,0))
+  self.assertFalse(latch.update(False,.8))
+  self.assertFalse(latch.update(True,1))
+  self.assertFalse(latch.update(True,1.2))
+  self.assertTrue(latch.update(True,1.5))
  def test_continuous_half_second_required(self):
   latch=GestureLatch()
   self.assertFalse(latch.update(True,0))
