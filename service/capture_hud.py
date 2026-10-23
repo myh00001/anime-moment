@@ -6,7 +6,7 @@ gi.require_version('PangoCairo','1.0')
 from gi.repository import Pango,PangoCairo
 
 def draw_capture_hud(c,width,height,remaining=None,shot_age=None,waiting=False):
-    scale=min(width/1280,height/720)
+    scale=min(width/1280,height/720)*1.3
     if scale<=0:return
     c.save();c.translate(width/2,height/2);c.scale(scale,scale)
     def text(value,y,size,bold=False,alpha=1):
