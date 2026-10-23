@@ -16,34 +16,17 @@ class FestivalTests(unittest.TestCase):
   self.assertTrue(victory(p@rotation*3))
   for base in [5,9]:p[base+3]=[p[base,0],-1,0]
   self.assertFalse(victory(p))
- def test_confirmation_tolerates_one_missed_sample(self):
+ def test_first_detection_triggers_immediately(self):
   latch=GestureLatch()
-  self.assertFalse(latch.update(True,0))
-  self.assertFalse(latch.update(False,.18))
-  self.assertTrue(latch.update(True,.36))
-  self.assertFalse(latch.update(True,.54))
- def test_long_gap_restarts_confirmation(self):
-  latch=GestureLatch()
-  self.assertFalse(latch.update(True,0))
-  self.assertFalse(latch.update(False,.8))
-  self.assertFalse(latch.update(True,1))
-  self.assertFalse(latch.update(True,1.2))
-  self.assertTrue(latch.update(True,1.5))
- def test_point_three_second_confirmation_required(self):
-  latch=GestureLatch()
-  self.assertFalse(latch.update(True,0))
-  self.assertFalse(latch.update(True,.18))
-  self.assertFalse(latch.update(True,.29))
-  self.assertTrue(latch.update(True,.3))
-  self.assertFalse(latch.update(True,.8))
+  self.assertFalse(latch.update(False,0))
+  self.assertTrue(latch.update(True,.01))
+  self.assertFalse(latch.update(True,.02))
  def test_brief_dropout_cannot_rearm_shutter(self):
   latch=GestureLatch()
-  self.assertFalse(latch.update(True,0))
-  self.assertTrue(latch.update(True,.5))
-  self.assertFalse(latch.update(False,.8))
+  self.assertTrue(latch.update(True,0))
+  self.assertFalse(latch.update(False,.18))
+  self.assertFalse(latch.update(True,.36))
   self.assertFalse(latch.update(True,1))
-  self.assertFalse(latch.update(False,1.8))
-  self.assertFalse(latch.update(True,2))
  def test_global_scan_reaches_all_corners_first(self):
   for w,h in [(1920,1080),(1080,1920)]:
    regions=gesture_regions(w,h)
@@ -82,13 +65,13 @@ class FestivalTests(unittest.TestCase):
   f.accept(frame,11);self.assertEqual(f.jobs.qsize(),1)
  def test_held_gesture_cannot_repeat(self):
   latch=GestureLatch()
-  self.assertFalse(latch.update(True,0))
-  self.assertTrue(latch.update(True,.5))
+  self.assertTrue(latch.update(True,0))
+  self.assertFalse(latch.update(True,.5))
   self.assertFalse(latch.update(True,10))
   self.assertFalse(latch.update(False,11))
   self.assertFalse(latch.update(False,12.1))
-  self.assertFalse(latch.update(True,13))
-  self.assertTrue(latch.update(True,13.5))
+  self.assertTrue(latch.update(True,13))
+  self.assertFalse(latch.update(True,13.5))
  def test_one_print_submission(self):
   calls=[]
   def runner(args,**kwargs):
