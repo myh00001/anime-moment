@@ -32,26 +32,21 @@ def gesture_regions(width, height):
 def victory(points):
     """Rotation-independent finger extension, rejecting fists and open palms."""
     p = np.asarray(points, dtype=float).reshape(21, 3)
-    def extended(base):
+    def extended(base,angle=-.55,reach=1.15):
         a, b = p[base] - p[base+1], p[base+3] - p[base+1]
         cosine = np.dot(a, b) / max(np.linalg.norm(a)*np.linalg.norm(b), 1e-9)
-        return cosine < -0.55 and np.linalg.norm(p[base+3]-p[0]) > 1.15*np.linalg.norm(p[base+1]-p[0])
-    return extended(5) and extended(9) and not extended(13) and not extended(17)
+        return cosine < angle and np.linalg.norm(p[base+3]-p[0]) > reach*np.linalg.norm(p[base+1]-p[0])
+    return extended(5,-.35,1.05) and extended(9,-.35,1.05) and not extended(13) and not extended(17)
 
 class GestureLatch:
     def __init__(self):
-        self.armed=True; self.since=None; self.absent=None;self.last_hit=None;self.hits=0
+        self.armed=True; self.absent=None
     def update(self, detected, now):
         if detected:
             self.absent=None
-            if self.last_hit is None or now-self.last_hit>.65:
-                self.since=now;self.hits=0
-            self.last_hit=now;self.hits+=1
-            if self.armed and self.hits>=2 and now-self.since >= .30:
+            if self.armed:
                 self.armed=False;return True
         else:
-            if self.last_hit is None or now-self.last_hit>.65:
-                self.since=None;self.hits=0
             if self.absent is None:self.absent=now
             if now-self.absent >= 1:self.armed=True
         return False
@@ -177,8 +172,8 @@ class Festival:
             import cv2
             from festival_vendor.mp_palmdet import MPPalmDet
             from festival_vendor.mp_handpose import MPHandPose
-            palm=MPPalmDet(str(ROOT/'models/palm_detection_mediapipe_2023feb.onnx'),scoreThreshold=.50,topK=32)
-            hand=MPHandPose(str(ROOT/'models/handpose_estimation_mediapipe_2023feb.onnx'),confThreshold=.65)
+            palm=MPPalmDet(str(ROOT/'models/palm_detection_mediapipe_2023feb.onnx'),scoreThreshold=.25,topK=32)
+            hand=MPHandPose(str(ROOT/'models/handpose_estimation_mediapipe_2023feb.onnx'),confThreshold=.35)
             latch=GestureLatch();last=-1;region_index=0;locked_region=None;region_shape=None;locked_until=0
             while self.running():
                 start=time.monotonic();seq,frame=self.latest()
