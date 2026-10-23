@@ -7,6 +7,7 @@ from display_settings import DEFAULT_SETTINGS,load_settings,save_settings,cover_
 ROOT=Path(__file__).resolve().parent
 sys.path.insert(0,str(ROOT/'vendor'))
 import cv2,numpy as np,gi
+cv2.setNumThreads(1)  # Gesture/UI process only; BPU workers configure their own threads.
 gi.require_version('Gtk','3.0')
 gi.require_version('PangoCairo','1.0')
 from gi.repository import Gtk,Gdk,GdkPixbuf,GLib,Pango,PangoCairo
@@ -24,7 +25,19 @@ class Player:
   css=Gtk.CssProvider();css.load_from_data(b'window {background: black;} label {color: white; font-size: 28px;}')
   Gtk.StyleContext.add_provider_for_screen(Gdk.Screen.get_default(),css,Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
   self.box=Gtk.Box(orientation=Gtk.Orientation.VERTICAL);self.image=Gtk.DrawingArea();self.image.set_size_request(1,1);self.image.connect('draw',self.draw_frame);self.pixbuf=None;self.label=Gtk.Label(label=self.message)
-  self.box.pack_start(self.image,True,True,0);self.box.pack_end(self.label,False,False,12)
+  self.festival=None;self.countdown='';self.gallery_paths=[]
+  self.content=Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL,spacing=8);self.content.pack_start(self.image,True,True,0)
+  self.sidebar=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=8);self.sidebar.set_size_request(235,1)
+  title=Gtk.Label(label='科技节 · 照片墙');self.sidebar.pack_start(title,False,False,10)
+  self.gallery=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=10)
+  self.gallery_scroll=Gtk.ScrolledWindow();self.gallery_scroll.set_policy(Gtk.PolicyType.NEVER,Gtk.PolicyType.AUTOMATIC);self.gallery_scroll.add(self.gallery);self.sidebar.pack_start(self.gallery_scroll,True,True,0)
+  self.festival_note=Gtk.Label(label='比 ✌ 保持片刻\n3 秒后自动拍照打印');self.festival_note.set_line_wrap(True);self.sidebar.pack_start(self.festival_note,False,False,8)
+  self.festival_note.set_max_width_chars(16)
+  self.sidebar.set_name('festival-sidebar')
+  festival_css=Gtk.CssProvider();festival_css.load_from_data(b'#festival-sidebar label {font-size:18px;} #festival-sidebar button {font-size:16px;color:#151b22;background-image:none;background-color:#f4f4f4;}')
+  Gtk.StyleContext.add_provider_for_screen(Gdk.Screen.get_default(),festival_css,Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+  shutter=Gtk.Button(label='拍照 · 3 秒倒计时');shutter.connect('clicked',lambda *_:self.festival and self.festival.trigger());self.sidebar.pack_start(shutter,False,False,10)
+  self.content.pack_end(self.sidebar,False,False,6);self.box.pack_start(self.content,True,True,0);self.box.pack_end(self.label,False,False,12)
   self.overlay=Gtk.Overlay();self.overlay.add(self.box)
   self.panel=Gtk.EventBox();self.panel.set_halign(Gtk.Align.START);self.panel.set_valign(Gtk.Align.START);self.panel.set_margin_start(18);self.panel.set_margin_top(18)
   self.panel.connect('draw',self.draw_panel);self.panel.add_events(Gdk.EventMask.POINTER_MOTION_MASK);self.panel.connect('motion-notify-event',self.pointer_motion)
@@ -40,6 +53,11 @@ class Player:
   self.panel.show_all();self.panel.hide();self.panel.set_no_show_all(True);self.overlay.add_overlay(self.panel);self.overlay.set_overlay_pass_through(self.panel,False);self.window.add(self.overlay)
   self.window.show_all()
   if start_workers:
+   from festival import Festival
+   def latest_for_gesture():
+    with self.lock:return self.sequence,self.latest
+   self.festival=Festival(latest_for_gesture,lambda photo:GLib.idle_add(self.add_photo,photo),lambda:self.running)
+   for photo in self.festival.history:self.add_photo(photo)
    self.window.fullscreen()
    self.capture_thread=threading.Thread(target=self.capture,daemon=True);self.capture_thread.start();self.processing_thread=threading.Thread(target=self.process,daemon=True);self.processing_thread.start();GLib.timeout_add(40,self.paint)
    threading.Thread(target=self.monitor_resources,daemon=True).start();GLib.timeout_add(500,self.refresh_info)
@@ -52,6 +70,19 @@ class Player:
  def close(self,*_):
   self.running=False
   if Gtk.main_level()>0:Gtk.main_quit()
+ def add_photo(self,photo):
+  self.gallery_paths=(self.gallery_paths+[photo])[-8:]
+  for child in self.gallery.get_children():self.gallery.remove(child)
+  for path in self.gallery_paths:
+   try:
+    thumb=GdkPixbuf.Pixbuf.new_from_file_at_scale(str(path),220,155,True)
+    self.gallery.pack_start(Gtk.Image.new_from_pixbuf(thumb),False,False,0)
+   except Exception as error:print('GALLERY',str(error),flush=True)
+  self.gallery.show_all()
+  GLib.idle_add(self.scroll_photos)
+  return False
+ def scroll_photos(self):
+  adj=self.gallery_scroll.get_vadjustment();adj.set_value(max(adj.get_lower(),adj.get_upper()-adj.get_page_size()));return False
  def build_settings(self):
   self.settings_expander=Gtk.Expander(label='画面设置');self.settings_expander.set_margin_start(18);self.settings_expander.set_margin_end(18);self.settings_expander.set_margin_bottom(14)
   grid=Gtk.Grid(column_spacing=10,row_spacing=10);grid.set_margin_top(12);self.settings_expander.add(grid);self.panel_content.pack_start(self.settings_expander,False,False,0)
@@ -121,6 +152,7 @@ class Player:
   focus=self.window.get_focus()
   if event.keyval==Gdk.KEY_Escape:self.window.unfullscreen()
   elif event.keyval==Gdk.KEY_F11 or (event.keyval==Gdk.KEY_f and not isinstance(focus,Gtk.Entry)):self.window.fullscreen()
+  elif event.keyval==Gdk.KEY_space and not isinstance(focus,Gtk.Entry) and self.festival:self.festival.trigger()
  def draw_frame(self,widget,context):
   if self.pixbuf is None:return False
   width=widget.get_allocated_width();height=widget.get_allocated_height();w=self.pixbuf.get_width();h=self.pixbuf.get_height()
@@ -128,6 +160,10 @@ class Player:
   left,top,scale=cover_geometry(width,height,w,h)
   context.save();context.rectangle(0,0,width,height);context.clip();context.translate(left,top);context.scale(scale,scale)
   Gdk.cairo_set_source_pixbuf(context,self.pixbuf,0,0);context.paint();context.restore()
+  if self.countdown:
+   layout=PangoCairo.create_layout(context);layout.set_font_description(Pango.FontDescription('Sans Bold 100'));layout.set_text(self.countdown,-1);tw,th=layout.get_pixel_size()
+   context.set_source_rgba(0,0,0,.5);context.rectangle((width-tw)/2-24,(height-th)/2-12,tw+48,th+24);context.fill()
+   context.set_source_rgb(1,1,1);context.move_to((width-tw)/2,(height-th)/2);PangoCairo.show_layout(context,layout)
   return False
  def draw_panel(self,widget,context):
   context.save();context.set_source_rgba(0,0,0,0.45)
@@ -191,6 +227,7 @@ class Player:
      if metrics['settings']!=self.settings:continue
      if metrics['settings']!=last_settings:self.frame_times.clear();last_settings=metrics['settings']
      self.result=output;count+=1
+     if self.festival:self.festival.accept(output,metrics['capture_sequence'])
      now=time.monotonic();self.frame_times.append(now)
      while len(self.frame_times)>2 and self.frame_times[0]<now-3:self.frame_times.popleft()
      fps=(len(self.frame_times)-1)/(now-self.frame_times[0]) if len(self.frame_times)>1 else 1000/max(metrics['latency_ms'],1)
@@ -200,6 +237,10 @@ class Player:
       (ROOT/'local-display-status.json').write_text(json.dumps(status,indent=2));print('DISPLAY',json.dumps(status),flush=True)
    except Exception as e:self.message='正在恢复推理进程…';print('INFERENCE',str(e),flush=True);time.sleep(1)
  def paint(self):
+  if self.festival:
+   countdown=self.festival.tick()
+   if countdown!=self.countdown:self.countdown=countdown;self.image.queue_draw()
+   self.festival_note.set_text(self.festival.status)
   self.label.set_text(self.message);self.label.set_visible(bool(self.message))
   if time.monotonic()-self.heartbeat>2:
    self.heartbeat=time.monotonic();(ROOT/'local-display-heartbeat.json').write_text(json.dumps({'message':self.message,'camera':self.capture_info,'has_output':self.result is not None,'time':time.time()}))
@@ -217,8 +258,11 @@ if __name__=='__main__':
  player=Player()
  signal.signal(signal.SIGTERM,lambda *_:GLib.idle_add(player.window.destroy))
  signal.signal(signal.SIGINT,lambda *_:GLib.idle_add(player.window.destroy))
+ signal.signal(signal.SIGUSR1,lambda *_:GLib.idle_add(player.festival.trigger))
  try:Gtk.main()
  finally:
   player.running=False
   if hasattr(player,'capture_thread'):player.capture_thread.join(timeout=5)
   if hasattr(player,'processing_thread'):player.processing_thread.join(timeout=10)
+  if player.festival:
+   player.festival.detector.join(timeout=5);player.festival.worker.join(timeout=35)
