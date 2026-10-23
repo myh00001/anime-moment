@@ -5,6 +5,7 @@ from collections import deque
 from resource_monitor import ResourceMonitor,corner_action
 from display_settings import DEFAULT_SETTINGS,load_settings,save_settings,cover_geometry,output_dimensions
 from festival_settings import load_options,save_options,wall_geometry,list_printers
+from capture_hud import draw_capture_hud
 ROOT=Path(__file__).resolve().parent
 sys.path.insert(0,str(ROOT/'vendor'))
 import cv2,numpy as np,gi
@@ -208,10 +209,9 @@ class Player:
   left,top,scale=cover_geometry(width,height,w,h)
   context.save();context.rectangle(0,0,width,height);context.clip();context.translate(left,top);context.scale(scale,scale)
   Gdk.cairo_set_source_pixbuf(context,self.pixbuf,0,0);context.paint();context.restore()
-  if self.countdown:
-   layout=PangoCairo.create_layout(context);layout.set_font_description(Pango.FontDescription('Sans Bold 100'));layout.set_text(self.countdown,-1);tw,th=layout.get_pixel_size()
-   context.set_source_rgba(0,0,0,.5);context.rectangle((width-tw)/2-24,(height-th)/2-12,tw+48,th+24);context.fill()
-   context.set_source_rgb(1,1,1);context.move_to((width-tw)/2,(height-th)/2);PangoCairo.show_layout(context,layout)
+  if self.festival:
+   now=time.monotonic();deadline=self.festival.deadline;shot=getattr(self.festival,'shutter_at',0)
+   draw_capture_hud(context,width,height,remaining=max(0,deadline-now) if deadline else None,shot_age=now-shot if shot else None,waiting=bool(self.countdown) and deadline is None)
   return False
  def draw_panel(self,widget,context):
   context.save();context.set_source_rgba(0,0,0,0.45)
@@ -288,6 +288,7 @@ class Player:
   if self.festival:
    countdown=self.festival.tick()
    if countdown!=self.countdown:self.countdown=countdown;self.image.queue_draw()
+   if countdown or time.monotonic()-getattr(self.festival,'shutter_at',0)<2:self.image.queue_draw()
    self.print_note.set_text(self.festival.status)
   self.label.set_text(self.message);self.label.set_visible(bool(self.message))
   if time.monotonic()-self.heartbeat>2:

@@ -154,8 +154,8 @@ class Festival:
         self.latest=latest;self.notify=notify;self.running=running
         self.configuration=configuration
         self.weather=WeatherCache(ROOT/'weather-cache.json',running)
-        self.lock=threading.Lock();self.deadline=None;self.min_sequence=None
-        self.status='比 ✌ 保持片刻，3 秒后拍照';self.jobs=queue.Queue(maxsize=2)
+        self.lock=threading.Lock();self.deadline=None;self.min_sequence=None;self.shutter_at=0
+        self.status='比 ✌ 即可开始 3 秒拍照倒计时';self.jobs=queue.Queue(maxsize=2)
         self.directory=ROOT/'captures';self.directory.mkdir(exist_ok=True)
         self.history=sorted(self.directory.glob('*/photo.jpg'))[-100:]
         self.worker=threading.Thread(target=self.save_loop,daemon=True);self.worker.start()
@@ -175,7 +175,7 @@ class Festival:
         with self.lock:
             if self.min_sequence is None or sequence<self.min_sequence:return
             self.min_sequence=None
-            try:self.jobs.put_nowait((rgb.copy(),dict(getattr(self,'configuration',lambda:DEFAULT_OPTIONS)())));self.status='正在生成报纸…'
+            try:self.jobs.put_nowait((rgb.copy(),dict(getattr(self,'configuration',lambda:DEFAULT_OPTIONS)())));self.shutter_at=time.monotonic();self.status='正在生成报纸…'
             except queue.Full:self.status='打印任务繁忙，请稍后再拍'
     def gesture_loop(self):
         try:
