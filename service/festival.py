@@ -59,7 +59,7 @@ def newspaper(photo, target, captured=None, weather=None):
         method(x*mm,y*mm,s)
     def rule(y,weight=.5):c.setLineWidth(weight);c.line(8*mm,y*mm,140*mm,y*mm)
     def reverse_label(x,y,w,label,size=12):
-        c.setFillColorRGB(.55,.55,.55);c.rect(x*mm,(y-1.4)*mm,w*mm,6.5*mm,fill=1,stroke=0)
+        c.setFillColorRGB(.55,.55,.55);c.rect(x*mm,(y-2.4)*mm,w*mm,8.5*mm,fill=1,stroke=0)
         c.setFillColorRGB(1,1,1);text(x+3,y,label,size,bold=True);c.setFillColorRGB(0,0,0)
     def wrap(value,size,limit):
         rows=[];line=''
@@ -88,7 +88,7 @@ def newspaper(photo, target, captured=None, weather=None):
     text(group_left,172,'北京',10)
     draw_weather_icon(c,(group_left+city_width+gap)*mm,171.7*mm,icon_size*mm,int(weather['code']) if available else None)
     text(140,172,temperature,10,align='right')
-    c.setFillColorRGB(.55,.55,.55);c.rect(8*mm,155*mm,132*mm,10*mm,fill=1,stroke=0);c.setFillColorRGB(1,1,1)
+    c.setFillColorRGB(.55,.55,.55);c.rect(8*mm,153.5*mm,132*mm,13*mm,fill=1,stroke=0);c.setFillColorRGB(1,1,1)
     text(74,158,'做中学科学 实践促创新',22,align='center',bold=True);c.setFillColorRGB(0,0,0)
     text(74,147,'用一次亲身体验，留下今天的科技记忆',10.5,align='center')
     left=['基于 RDK S100，将摄像头画面','实时转化为动漫风格。比出 V 手势，','即可倒计时拍照，并自动生成、','打印专属科技节纪念报纸。']
