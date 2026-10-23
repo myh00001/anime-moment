@@ -36,7 +36,9 @@ def victory(points):
         a, b = p[base] - p[base+1], p[base+3] - p[base+1]
         cosine = np.dot(a, b) / max(np.linalg.norm(a)*np.linalg.norm(b), 1e-9)
         return cosine < angle and np.linalg.norm(p[base+3]-p[0]) > reach*np.linalg.norm(p[base+1]-p[0])
-    return extended(5,-.35,1.05) and extended(9,-.35,1.05) and not extended(13) and not extended(17)
+    # Allow visibly bent index/middle fingers; keep the other fingers folded
+    # requirement unchanged to distinguish a V sign from an open palm.
+    return extended(5,-.10,1.02) and extended(9,-.10,1.02) and not extended(13) and not extended(17)
 
 class GestureLatch:
     def __init__(self):

@@ -5,6 +5,17 @@ from festival import GestureLatch,submit_print,victory,Festival,gesture_regions
 import numpy as np,threading,queue
 
 class FestivalTests(unittest.TestCase):
+ def test_bent_v_fingers_are_accepted_but_folded_fingers_are_not(self):
+  p=np.zeros((21,3))
+  for base,x in [(5,-1.5),(9,-.5),(13,.5),(17,1.5)]:
+   for joint in range(4):p[base+joint]=[x,-2-joint,0]
+  for base in [13,17]:p[base+3]=[p[base,0],-1,0]
+  for base in [5,9]:p[base+3]=[p[base,0]+2,-3.4,0]
+  self.assertTrue(victory(p))
+  rotation=np.array([[0,-1,0],[1,0,0],[0,0,1]])
+  self.assertTrue(victory(p@rotation*3))
+  for base in [5,9]:p[base+3]=[p[base,0],-1,0]
+  self.assertFalse(victory(p))
  def test_confirmation_tolerates_one_missed_sample(self):
   latch=GestureLatch()
   self.assertFalse(latch.update(True,0))
