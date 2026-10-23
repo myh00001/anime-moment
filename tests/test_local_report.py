@@ -71,7 +71,24 @@ class LocalReportTests(unittest.TestCase):
   process.communicate.return_value=(json.dumps({'text':'No reliable subject.','seconds':0,'subject_visible':False,'model':'SmolVLM2-500M'}).encode(),b'')
   with patch('local_report.bpu_available',return_value=True),patch('local_report.subprocess.Popen',return_value=process):text=reporter.generate('/local/original.jpg')
   self.assertIn('科技节',text);self.assertNotIn('人',text);self.assertNotIn('裙',text)
-  self.assertEqual(reporter.opener.open.call_count,1)
+  reporter.opener.open.assert_not_called()
+
+ def test_bpu_observation_overlaps_writer_startup_before_waiting_for_health(self):
+  events=[];reporter=LocalReporter(starter=lambda:events.append('start'))
+  process=Mock();process.returncode=0
+  def observe(**kwargs):
+   events.append('vision')
+   return json.dumps({'text':'A jacket.','seconds':1}).encode(),b''
+  process.communicate.side_effect=observe
+  health=io.BytesIO(b'{}');health.status=200
+  writer=io.BytesIO(json.dumps({'choices':[{'message':{'content':'体验者身穿夹克。'}}]}).encode())
+  def respond(request,**kwargs):
+   if isinstance(request,str):events.append('health');return health
+   events.append('writer');return writer
+  reporter.opener=Mock();reporter.opener.open.side_effect=respond
+  with patch('local_report.bpu_available',return_value=True),patch('local_report.subprocess.Popen',return_value=process):
+   self.assertIn('夹克',reporter.generate('/local/original.jpg'))
+  self.assertEqual(events,['start','vision','health','writer'])
 
  def test_upper_body_observation_does_not_claim_unseen_pants_or_dress(self):
   self.assertEqual(upper_clothing_observation('black jacket and black pants.'),'The visible person wears a jacket.')

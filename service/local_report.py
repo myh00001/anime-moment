@@ -77,17 +77,8 @@ class LocalReporter:
         use_bpu=bpu_available()
         self.backend='S100 BPU vision + CPU text' if use_bpu else 'CPU vision + CPU text'
         self.starter()
-        while True:
-            left=deadline-time.monotonic()
-            if left<=0:raise TimeoutError('本地模型加载超时')
-            try:
-                healthy=True
-                for endpoint in ((WRITER_ENDPOINT,) if use_bpu else (ENDPOINT,WRITER_ENDPOINT)):
-                    with self.opener.open(endpoint+'/health',timeout=min(2,left)) as response:
-                        healthy=healthy and response.status==200
-                if healthy:break
-            except OSError:pass
-            time.sleep(min(.25,max(0,deadline-time.monotonic())))
+        # Load the writer while the independent BPU observation runs.
+        if not use_bpu:self.wait_ready(deadline,use_bpu)
         if use_bpu:
             left=deadline-time.monotonic()
             helper=Path(__file__).with_name('report_bpu_caption.py')
@@ -123,6 +114,7 @@ class LocalReporter:
                 'max_tokens':36,'temperature':.1,'stream':False}
             self.last_caption=self.complete(ENDPOINT,payload,deadline).strip()
         if len(self.last_caption)<8:raise ValueError('本地看图结果无效')
+        if use_bpu:self.wait_ready(deadline,use_bpu)
         payload={'model':'local-report-writer','messages':[
             {'role':'system','content':PROMPT},
             {'role':'user','content':'画面观察：'+self.last_caption+'\n仅写一句短中文，必须以“体验者”开头，说明其身着什么上衣。只翻译观察中的衣服类别。不写颜色、裤子、配饰、动作、字数标注或活动背景。/no_think'}],
@@ -130,6 +122,18 @@ class LocalReporter:
             'grammar':'root ::= [一-鿿] [一-鿿，。！？、：；“”‘’（）0-9 ]{5,95}',
             'chat_template_kwargs':{'enable_thinking':False}}
         return validate_clothing(clean_report(self.complete(WRITER_ENDPOINT,payload,deadline)),self.last_caption)
+    def wait_ready(self,deadline,use_bpu):
+        while True:
+            left=deadline-time.monotonic()
+            if left<=0:raise TimeoutError('本地模型加载超时')
+            try:
+                healthy=True
+                for endpoint in ((WRITER_ENDPOINT,) if use_bpu else (ENDPOINT,WRITER_ENDPOINT)):
+                    with self.opener.open(endpoint+'/health',timeout=min(2,left)) as response:
+                        healthy=healthy and response.status==200
+                if healthy:break
+            except OSError:pass
+            time.sleep(min(.25,max(0,deadline-time.monotonic())))
     def complete(self,endpoint,payload,deadline):
         request=urllib.request.Request(endpoint+'/v1/chat/completions',
             data=json.dumps(payload,ensure_ascii=False).encode('utf-8'),
