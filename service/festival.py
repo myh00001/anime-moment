@@ -193,6 +193,8 @@ class Festival:
             from festival_vendor.mp_handpose import MPHandPose
             palm=MPPalmDet(str(ROOT/'models/palm_detection_mediapipe_2023feb.onnx'),scoreThreshold=.25,topK=32)
             hand=MPHandPose(str(ROOT/'models/handpose_estimation_mediapipe_2023feb.onnx'),confThreshold=.35)
+            from gesture_runtime import configure
+            print('GESTURE_RUNTIME',configure(palm,hand,ROOT),flush=True)
             latch=GestureLatch();last=-1;region_index=0;locked_region=None;region_shape=None;locked_until=0
             while self.running():
                 if getattr(self,'ai_busy_at',0):
