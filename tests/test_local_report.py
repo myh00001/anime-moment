@@ -2,7 +2,7 @@ import sys,unittest,io,json,tempfile
 from pathlib import Path
 from unittest.mock import Mock,patch
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'service'))
-from local_report import LocalReporter,make_report,clean_report,ENDPOINT,WRITER_ENDPOINT,PROMPT
+from local_report import LocalReporter,make_report,clean_report,ENDPOINT,WRITER_ENDPOINT,PROMPT,validate_clothing,upper_clothing_observation
 
 class LocalReportTests(unittest.TestCase):
  def test_disabled_never_starts_or_calls_model(self):
@@ -40,6 +40,7 @@ class LocalReportTests(unittest.TestCase):
   text=clean_report('一位穿着蓝色外套的人抬起手，动作清晰。')
   self.assertIn('蓝色外套',text);self.assertIn('科技节的专属纪念',text)
   self.assertIn('AI动漫拍照',clean_report('蓝衣体验者举起手臂。'))
+  self.assertIn('蓝色外套',clean_report('画面观察：蓝色外套。'))
 
  def test_prompt_includes_verified_context_and_separates_it_from_observation(self):
   for phrase in ['北京市第六十五中学2026年校园科技节','做中学科学','实践促创新','漫像时刻','不代表图片里一定发生','身份','不得猜测']:self.assertIn(phrase,PROMPT)
@@ -58,5 +59,23 @@ class LocalReportTests(unittest.TestCase):
   self.assertEqual(reporter.backend,'S100 BPU vision + CPU text')
   self.assertEqual(reporter.vision_seconds,3.2)
   self.assertIn('blue jacket',json.loads(reporter.opener.open.call_args.args[0].data)['messages'][1]['content'])
+
+ def test_writer_cannot_turn_jacket_into_dress(self):
+  with self.assertRaises(ValueError):validate_clothing('体验者身穿连衣裙。','A blue jacket with a black collar.')
+  self.assertEqual(validate_clothing('体验者身穿夹克。','A blue jacket.'),'体验者身穿夹克。')
+  self.assertEqual(validate_clothing('体验者身穿连衣裙。','A person wearing a dress.'),'体验者身穿连衣裙。')
+ def test_no_reliable_subject_never_describes_clothing_rack_as_person(self):
+  reporter=LocalReporter(starter=Mock());health=io.BytesIO(b'{}');health.status=200
+  reporter.opener=Mock();reporter.opener.open.return_value=health
+  process=Mock();process.returncode=0
+  process.communicate.return_value=(json.dumps({'text':'No reliable subject.','seconds':0,'subject_visible':False,'model':'SmolVLM2-500M'}).encode(),b'')
+  with patch('local_report.bpu_available',return_value=True),patch('local_report.subprocess.Popen',return_value=process):text=reporter.generate('/local/original.jpg')
+  self.assertIn('科技节',text);self.assertNotIn('人',text);self.assertNotIn('裙',text)
+  self.assertEqual(reporter.opener.open.call_count,1)
+
+ def test_upper_body_observation_does_not_claim_unseen_pants_or_dress(self):
+  self.assertEqual(upper_clothing_observation('black jacket and black pants.'),'The visible person wears a jacket.')
+  self.assertIsNone(upper_clothing_observation('A blue dress.'))
+  with self.assertRaises(ValueError):validate_clothing('黑色外套和黑色裤子。','A black jacket and pants.')
 
 if __name__=='__main__':unittest.main()

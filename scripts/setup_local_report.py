@@ -48,11 +48,17 @@ def main():
     parser.add_argument('--root',type=Path,required=True,help='Directory containing festival.py')
     parser.add_argument('--prepare',action='store_true',help='Download ~1GB and build llama-server on this board')
     parser.add_argument('--prepare-bpu',action='store_true',help='Install the official S100 vision node and download its ~166MB encoder')
+    parser.add_argument('--prepare-bpu-500m',action='store_true',help='Install the stronger ~609MB SmolVLM2-500M BPU assets')
     args=parser.parse_args();root=args.root.resolve();assets=root/'local-vlm';assets.mkdir(exist_ok=True)
-    if args.prepare_bpu:
+    if args.prepare_bpu or args.prepare_bpu_500m:
         subprocess.run(['sudo','apt-get','install','-y','--no-install-recommends','tros-humble-hobot-llamacpp'],check=True)
         target=assets/'bpu-report/SigLip_int16_SmolVLM2_256M_Instruct_S100.hbm';target.parent.mkdir(exist_ok=True)
         download('https://hf-mirror.com/D-Robotics/SmolVLM2-256M-Video-Instruct-GGUF-BPU/resolve/main/rdks100/'+target.name,target,165506728)
+    if args.prepare_bpu_500m:
+        folder=assets/'smol500-bpu';folder.mkdir(exist_ok=True)
+        base='https://hf-mirror.com/D-Robotics/SmolVLM2-500M-Video-Instruct-GGUF-BPU/resolve/main/'
+        download(base+'SmolVLM2-500M-Video-Instruct-Q8_0.gguf',folder/'SmolVLM2-500M-Video-Instruct-Q8_0.gguf',436808704)
+        download(base+'rdks100/SigLip_int16_SmolVLM2_500M_Instruct_S100.hbm',folder/'SigLip_int16_SmolVLM2_500M_Instruct_S100.hbm',171832992)
     if args.prepare:
         if shutil.disk_usage(root).free<3*1024**3:raise RuntimeError('At least 3GB free disk space is required')
         for name,size in FILES.items():

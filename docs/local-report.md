@@ -14,7 +14,7 @@
 python3 scripts/setup_local_report.py --root /home/sunrise/anime-camera --prepare
 ```
 
-应用目录需要部署`local_report.py`、`run_report_models.py`、`report_bpu_caption.py`和更新后的`festival.py`、`festival_settings.py`、`local_display.py`。设置开关启用时会按需启动`anime-report-vlm.service`，不需要将模型服务额外设为开机启动。已准备过模型和可执行文件时，可省略`--prepare`仅安装/刷新用户服务。
+应用目录需要部署`local_report.py`、`run_report_models.py`、`report_bpu_caption.py`、`report_subject.py`和更新后的`festival.py`、`festival_settings.py`、`local_display.py`。设置开关启用时会按需启动`anime-report-vlm.service`，不需要将模型服务额外设为开机启动。已准备过模型和可执行文件时，可省略`--prepare`仅安装/刷新用户服务。
 
 模型来自[SmolVLM2-256M](https://huggingface.co/ggml-org/SmolVLM2-256M-Video-Instruct-GGUF)和[Qwen3-0.6B](https://huggingface.co/Qwen/Qwen3-0.6B-GGUF)，下载使用HF镜像，权重适用上游许可。运行时来自[llama.cpp](https://github.com/ggml-org/llama.cpp)（MIT），增加了由`FESTIVAL_VLM_SINGLE_VIEW`控制的完整单视图编码，关闭重复图像切片以缩短等待；照片本身不裁剪。源码、模型权重及用户照片均不随本仓库发布。
 
@@ -45,3 +45,19 @@ python3 scripts/setup_local_report.py --root /home/sunrise/anime-camera --prepar
 对同一已有原图，官方BPU节点在动漫运行时18.628秒、定格暂停后6.209秒（两次生成内容不同，仅作单次对照，不代表稳定均值）。定格状态完整照片保存→BPU看图→中文报道→PDF-only流程12.783秒，其中看图3.986秒，AI看图与写作合计11.03秒。所有实验仅在本机处理、未实际提交打印；不包含相机冷启动和打印机出纸。后续真实界面测试见验证结果补充。
 
 2026-10-24真实相机预热后验证：从触发3秒倒计时到PDF-only完成13.418秒，其中AI看图/写作8.13秒、BPU看图阶段4.204秒。处理期间输出帧计数保持31，完成后恢复预览；测试自动恢复原有AI关闭和打印启用设置，没有提交打印。单次样本并非长期均值，图像内容与首次加载会影响耗时。
+
+## 夜间识图改进：500M + 原图主体定位
+
+优先使用官方SmolVLM2-500M（Q8语言模型+BPU视觉编码），资源校验不完整时保留256M回退。安装：
+
+```bash
+python3 scripts/setup_local_report.py --root /home/sunrise/anime-camera --prepare-bpu-500m
+```
+
+新增约609MB板端模型资源，不上传仓库。`report_subject.py`仅在拍照后复用现有YuNet模型定位最大可见人脸，从同次摄像头原图截取头部及上半身，缩放至编码器512×512输入；原图存档、动漫配图、照片墙和打印取景均保持原样。这样避免衣架服装被误认为人物，也避免宽屏图在官方预处理的左上角填充后主体过小。多个人时只描述最大可见主体，不编造人数。未可靠定位人物时使用中性现场纪念语，不根据背景衣服猜人物或声称画面无人。
+
+小模型对颜色、配饰及未入镜下装仍不可靠，因此报道只保留已观察的上衣类别，再由本地中文写作模型形成短句并补充活动纪念语；不将不确定颜色写入正文。写作结果若新增观察不支持的连衣裙/裙子等类别或下装细节，拒绝该结果、回退固定文案。仍可能发生其他识别错误，不能把语言模型的肯定措辞视作置信度。
+
+2026-10-24隔离同图对照（小样本，非普遍准确率）：近景夹克/正常距离夹克均返回外套，完整AI阶段7.83/6.67秒，BPU看图阶段4.553/4.513秒；人物基本离开画面时使用中性文案1.01秒且不调用BPU推理。此前整图256M曾将夹克误作连衣裙。InternVL3-1B候选虽更大，但在这些图片上仍有衣物细节误判，未采用。全部测试PDF-only，未提交打印。
+
+500M+主体定位的完整保存→AI→PDF-only链路另测8.488秒，其中AI6.79秒、看图4.648秒，不含3秒倒计时、相机预热和实际出纸。部署后AI关闭、未检测到人脸时25秒采样：平均输出8.508FPS（8.233～8.697），CPU84.455%；这是后续实时帧率优化基线，不是不同场景下的可比提升比例。

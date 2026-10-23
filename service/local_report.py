@@ -34,7 +34,9 @@ def clean_report(value):
     value=re.sub(r'^(现场报道|报道正文|正文|画面观察)[：:]\s*','',value.strip())
     value=re.sub(r'\s+','',value).strip('“”"')
     value=re.sub(r'[*#`]+','',value)
-    if len(re.findall(r'[\u4e00-\u9fff]',value))<6:
+    value=re.sub(r'[（(]\s*\d+\s*字\s*[）)]','',value)
+    value=re.sub(r'。{2,}','。',value)
+    if len(re.findall(r'[\u4e00-\u9fff]',value))<4:
         raise ValueError('模型未返回有效中文报道')
     if not any(word in value for word in ('AI','人工智能','科技节')):
         if value[-1] not in '。！？':value+='。'
@@ -43,6 +45,27 @@ def clean_report(value):
         value=value[:95].rstrip('，、；：。！？')+'。'
     elif value[-1] not in '。！？':value=value[:95].rstrip('，、；：')+'。'
     return value
+
+def upper_clothing_observation(value):
+    """Restrict upper-body views to a garment category, excluding unseen lower body."""
+    source=value.lower()
+    for pattern,label in [(r'\bjacket\b','jacket'),(r'\bcoat\b','coat'),
+                          (r'\bhoodie\b','hoodie'),(r'\bsweater\b','sweater'),
+                          (r'\bt-?shirt\b','t-shirt'),(r'\bshirt\b','shirt')]:
+        if re.search(pattern,source):return 'The visible person wears a '+label+'.'
+    return None
+
+def validate_clothing(text,observation):
+    """Reject specific garment claims the image observation does not support."""
+    source=observation.lower()
+    if any(word in text for word in ('裤','鞋')):raise ValueError('Lower-body clothing is outside the observation scope')
+    checks=[(('连衣裙','裙子','长裙','短裙'),('dress','skirt','gown','裙')),
+            (('夹克','外套'),('jacket','coat','outerwear','外套','夹克')),
+            (('毛衣','针织衫'),('sweater','knit','毛衣','针织'))]
+    for claims,evidence in checks:
+        if any(word in text for word in claims) and not any(word in source for word in evidence):
+            raise ValueError('Unsupported clothing description')
+    return text
 
 class LocalReporter:
     def __init__(self,timeout=35,starter=warm_local_model):
@@ -81,6 +104,14 @@ class LocalReporter:
                 raise TimeoutError('BPU看图超时')
             if process.returncode:raise RuntimeError('BPU看图失败')
             observation=json.loads(output);self.last_caption=observation['text'];self.vision_seconds=observation['seconds']
+            self.vision_model=observation.get('model','unknown')
+            self.subject={key:observation[key] for key in ('subject_visible','faces','source_box') if key in observation}
+            if observation.get('subject_visible') is False:
+                return '镜头定格了现场的一刻，AI动漫拍照为科技节留下专属纪念。'
+            if observation.get('subject_visible') is True:
+                scoped=upper_clothing_observation(self.last_caption)
+                if scoped is None:return '镜头留下了体验中的一刻，AI动漫拍照将科技节的记忆化为专属纪念。'
+                self.last_caption=scoped
         else:
             with Image.open(photo) as source:
                 image=source.convert('RGB');image.thumbnail((448,448))
@@ -94,11 +125,11 @@ class LocalReporter:
         if len(self.last_caption)<8:raise ValueError('本地看图结果无效')
         payload={'model':'local-report-writer','messages':[
             {'role':'system','content':PROMPT},
-            {'role':'user','content':'画面观察：'+self.last_caption+'\n请先将画面观察准确译写成一句中文，20至35字。只写观察明确提到的衣着或姿态，不添加手持物和动作，不推断身份。holding up a hand意为抬起一只手，不是手持物品。只输出这一句，活动纪念语由版面补充。/no_think'}],
+            {'role':'user','content':'画面观察：'+self.last_caption+'\n仅写一句短中文，必须以“体验者”开头，说明其身着什么上衣。只翻译观察中的衣服类别。不写颜色、裤子、配饰、动作、字数标注或活动背景。/no_think'}],
             'max_tokens':96,'temperature':.2,'top_p':.85,'stream':False,
             'grammar':'root ::= [一-鿿] [一-鿿，。！？、：；“”‘’（）0-9 ]{5,95}',
             'chat_template_kwargs':{'enable_thinking':False}}
-        return clean_report(self.complete(WRITER_ENDPOINT,payload,deadline))
+        return validate_clothing(clean_report(self.complete(WRITER_ENDPOINT,payload,deadline)),self.last_caption)
     def complete(self,endpoint,payload,deadline):
         request=urllib.request.Request(endpoint+'/v1/chat/completions',
             data=json.dumps(payload,ensure_ascii=False).encode('utf-8'),
@@ -118,6 +149,8 @@ def make_report(photo,enabled,reporter=None):
                 'seconds':round(time.monotonic()-start,2)}
         if isinstance(getattr(engine,'last_caption',None),str):result['observation']=engine.last_caption
         if isinstance(getattr(engine,'backend',None),str):result['backend']=engine.backend
+        if isinstance(getattr(engine,'vision_model',None),str):result['vision_model']=engine.vision_model
+        if isinstance(getattr(engine,'subject',None),dict):result['subject']=engine.subject
         if isinstance(getattr(engine,'vision_seconds',None),(int,float)):result['vision_seconds']=engine.vision_seconds
         return result
     except Exception as error:
