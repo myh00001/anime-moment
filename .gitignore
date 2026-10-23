@@ -26,6 +26,8 @@ service/assets/fonts/
 config-backup/
 samples/
 captures/
+local-vlm/
+*.gguf
 .env
 .env.*
 !.env.example

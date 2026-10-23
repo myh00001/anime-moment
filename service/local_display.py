@@ -59,6 +59,7 @@ class Player:
     with self.lock:return self.sequence,self.latest
    self.festival=Festival(latest_for_gesture,lambda photo:GLib.idle_add(self.add_photo,photo),lambda:self.running,configuration=lambda:dict(self.festival_settings))
    for photo in self.festival.history:self.add_photo(photo)
+   if self.festival_settings.get('ai_report',False):self.warm_report_model()
    self.window.fullscreen()
    self.capture_thread=threading.Thread(target=self.capture,daemon=True);self.capture_thread.start();self.processing_thread=threading.Thread(target=self.process,daemon=True);self.processing_thread.start();GLib.timeout_add(40,self.paint)
    threading.Thread(target=self.monitor_resources,daemon=True).start();GLib.timeout_add(500,self.refresh_info)
@@ -128,6 +129,8 @@ class Player:
   self.print_note=Gtk.Label(label='');self.print_note.set_line_wrap(True);self.print_note.set_max_width_chars(35);self.print_note.set_xalign(0);grid.attach(self.print_note,0,5,3,1)
   self.banner_height=Gtk.SpinButton.new_with_range(0,1600,10);self.banner_height.set_numeric(True);self.banner_height.set_value(self.festival_settings.get('banner_height',0))
   grid.attach(Gtk.Label(label='顶部横幅高度',xalign=0),0,6,1,1);grid.attach(self.banner_height,1,6,1,1);grid.attach(Gtk.Label(label='像素，0 = 自动'),2,6,1,1)
+  self.ai_report=Gtk.CheckButton(label='启用本地 AI 报道生成（根据照片）');self.ai_report.set_active(self.festival_settings.get('ai_report',False));grid.attach(self.ai_report,0,7,3,1)
+  ai_note=Gtk.Label(label='开启后自动看图写报道；加载或生成失败时使用原有文案。',xalign=0);ai_note.set_line_wrap(True);ai_note.set_max_width_chars(35);grid.attach(ai_note,0,8,3,1)
   self.pdf_only.connect('toggled',lambda button:self.printer_choice.set_sensitive(not button.get_active()));self.printer_choice.set_sensitive(not self.pdf_only.get_active())
   self.festival_expander.connect('notify::expanded',lambda *_:GLib.idle_add(self.resize_panel))
   self.refresh_printers()
@@ -140,11 +143,19 @@ class Player:
   for name in sorted(set(names+[selected])):self.printer_choice.append(name,name if name in names else name+'（未发现）')
   self.printer_choice.set_active_id(selected);return False
  def apply_festival_settings(self,*_):
-  value={'gallery_count':self.photo_count.get_value_as_int(),'print_enabled':not self.pdf_only.get_active(),'printer':self.printer_choice.get_active_id() or self.festival_settings['printer'],'banner_height':self.banner_height.get_value_as_int()}
+  value={'gallery_count':self.photo_count.get_value_as_int(),'print_enabled':not self.pdf_only.get_active(),'printer':self.printer_choice.get_active_id() or self.festival_settings['printer'],'banner_height':self.banner_height.get_value_as_int(),'ai_report':self.ai_report.get_active()}
   try:
    self.festival_settings=save_options(ROOT/'festival-settings.json',value);self.schedule_wall_layout()
+   if value['ai_report']:self.warm_report_model()
    self.print_note.set_text('设置已保存；下一张照片仅保存 PDF。' if not value['print_enabled'] else '设置已保存；下一张使用 '+value['printer']+' 打印。')
   except (ValueError,OSError) as error:self.print_note.set_text('设置未保存：'+str(error))
+ def warm_report_model(self):
+  def worker():
+   try:
+    from local_report import warm_local_model
+    warm_local_model()
+   except Exception as error:print('REPORT_WARMUP',type(error).__name__,flush=True)
+  threading.Thread(target=worker,daemon=True).start()
  def build_settings(self):
   self.settings_expander=Gtk.Expander(label='画面设置');self.settings_expander.set_margin_start(18);self.settings_expander.set_margin_end(18);self.settings_expander.set_margin_bottom(14)
   grid=Gtk.Grid(column_spacing=10,row_spacing=10);grid.set_margin_top(12);self.settings_expander.add(grid);self.panel_content.pack_start(self.settings_expander,False,False,0)
@@ -290,7 +301,7 @@ class Player:
      if metrics['settings']!=self.settings:continue
      if metrics['settings']!=last_settings:self.frame_times.clear();last_settings=metrics['settings']
      self.result=output;count+=1
-     if self.festival:self.festival.accept(output,metrics['capture_sequence'])
+     if self.festival:self.festival.accept(output,metrics['capture_sequence'],metrics.pop('original_bgr',None))
      now=time.monotonic();self.frame_times.append(now)
      while len(self.frame_times)>2 and self.frame_times[0]<now-3:self.frame_times.popleft()
      fps=(len(self.frame_times)-1)/(now-self.frame_times[0]) if len(self.frame_times)>1 else 1000/max(metrics['latency_ms'],1)

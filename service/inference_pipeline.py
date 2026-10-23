@@ -105,6 +105,7 @@ def run_pipeline(latest, running, release_stage=None, configuration=None):
             if event[0] == 'init':
                 initialized.add(event[1])
         busy = set()
+        originals = {}
         next_slot = 0
         can_submit = True
         previous = displayed = -1
@@ -118,6 +119,7 @@ def run_pipeline(latest, running, release_stage=None, configuration=None):
                 seq, frame = latest()
                 if frame is not None and seq != previous:
                     previous = seq
+                    originals[seq] = frame
                     settings = dict(configuration()) if configuration is not None else None
                     tasks[next_slot].put((seq, frame, time.perf_counter(), settings))
                     busy.add(next_slot)
@@ -134,10 +136,12 @@ def run_pipeline(latest, running, release_stage=None, configuration=None):
                 can_submit = True
             elif kind in ('done', 'error'):
                 busy.discard(slot)
+                original = originals.pop(seq, None)
                 if kind == 'error':
                     print('INFERENCE_WORKER', event[3], flush=True)
                 elif seq > displayed:
                     displayed = seq
+                    event[4]['original_bgr'] = original
                     yield event[3], event[4]
     finally:
         for worker in workers:

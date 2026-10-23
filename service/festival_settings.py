@@ -4,18 +4,20 @@ import re
 import subprocess
 from pathlib import Path
 
-DEFAULT_OPTIONS = {'gallery_count': 0, 'print_enabled': True, 'printer': 'S100_Festival', 'banner_height': 0}
+DEFAULT_OPTIONS = {'gallery_count': 0, 'print_enabled': True, 'printer': 'S100_Festival', 'banner_height': 0, 'ai_report': False}
 
 def normalize_options(value):
     count = value.get('gallery_count', 0)
     enabled = value.get('print_enabled', True)
     printer = value.get('printer', 'S100_Festival')
     banner = value.get('banner_height', 0)
+    ai_report = value.get('ai_report', False)
+    if type(ai_report) is not bool: raise ValueError('AI报道开关无效')
     if type(banner) is not int or not 0 <= banner <= 1600: raise ValueError('横幅高度应为0至1600像素，0为自动')
     if type(count) is not int or not 0 <= count <= 20: raise ValueError('照片数量应为0至20')
     if type(enabled) is not bool: raise ValueError('打印开关无效')
     if not isinstance(printer, str) or not re.fullmatch(r'[A-Za-z0-9_.-]{1,127}', printer): raise ValueError('打印机名称无效')
-    return {'gallery_count': count, 'print_enabled': enabled, 'printer': printer, 'banner_height': banner}
+    return {'gallery_count': count, 'print_enabled': enabled, 'printer': printer, 'banner_height': banner, 'ai_report': ai_report}
 
 def load_options(path):
     try: return normalize_options(json.loads(Path(path).read_text(encoding='utf-8')))

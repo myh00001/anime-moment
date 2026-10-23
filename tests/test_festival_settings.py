@@ -28,7 +28,7 @@ class PhotoWallSettingsTests(unittest.TestCase):
  def test_options_survive_restart_and_bad_save_preserves_them(self):
   with tempfile.TemporaryDirectory() as directory:
    path=Path(directory)/'settings.json'
-   options={'gallery_count':5,'print_enabled':False,'printer':'Other_Printer','banner_height':180}
+   options={'gallery_count':5,'print_enabled':False,'printer':'Other_Printer','banner_height':180,'ai_report':True}
    save_options(path,options);self.assertEqual(load_options(path),options)
    with self.assertRaises(ValueError):save_options(path,dict(options,gallery_count=99))
    self.assertEqual(load_options(path),options)
@@ -43,9 +43,33 @@ class PhotoWallSettingsTests(unittest.TestCase):
   self.assertEqual(calls,[('photo.pdf','New_Printer')]);self.assertEqual(result['state'],'submitted')
  def test_queued_capture_keeps_its_original_print_options(self):
   import queue,threading,numpy as np
-  options=dict(DEFAULT_OPTIONS,print_enabled=False)
+  options=dict(DEFAULT_OPTIONS,print_enabled=False,ai_report=True)
   f=Festival.__new__(Festival);f.lock=threading.Lock();f.min_sequence=10;f.jobs=queue.Queue();f.configuration=lambda:options
-  f.accept(np.zeros((2,2,3),np.uint8),10);options['print_enabled']=True
-  rgb,captured=f.jobs.get_nowait();self.assertFalse(captured['print_enabled'])
+  raw=np.full((3,4,3),123,np.uint8)
+  f.accept(np.zeros((2,2,3),np.uint8),10,raw);raw[:]=0;options['print_enabled']=True;options['ai_report']=False
+  rgb,captured,original=f.jobs.get_nowait();self.assertTrue((original==123).all());self.assertFalse(captured['print_enabled']);self.assertTrue(captured['ai_report'])
+
+ def test_report_receives_original_camera_pixels_and_pdf_receives_anime(self):
+  import queue,threading,numpy as np
+  from unittest.mock import patch
+  from PIL import Image
+  with tempfile.TemporaryDirectory() as folder:
+   f=Festival.__new__(Festival);f.lock=threading.Lock();f.min_sequence=10;f.jobs=queue.Queue()
+   f.configuration=lambda:dict(DEFAULT_OPTIONS,print_enabled=False,ai_report=True)
+   f.running=lambda:False;f.directory=Path(folder);f.history=[];f.notify=lambda photo:None
+   anime=np.zeros((4,4,3),np.uint8);anime[:,:,0]=255
+   raw=np.zeros((4,4,3),np.uint8);raw[:,:,0]=255 # BGR blue, different from anime RGB red.
+   f.accept(anime,9,raw);self.assertTrue(f.jobs.empty())
+   f.accept(anime,10,raw)
+   def report(path,enabled):
+    self.assertTrue(enabled);self.assertEqual(path.name,'original.jpg')
+    pixel=Image.open(path).getpixel((0,0));self.assertGreater(pixel[2],240);self.assertLess(pixel[0],10)
+    return {'state':'generated','text':'test'}
+   def paper(photo,pdf,**kwargs):
+    self.assertEqual(photo.name,'photo.jpg')
+    self.assertGreater(Image.open(photo).getpixel((0,0))[0],240)
+    pdf.write_bytes(b'test')
+   with patch('festival.make_report',side_effect=report),patch('festival.newspaper',side_effect=paper):f.save_loop()
+   self.assertEqual(len(list(Path(folder).glob('*/original.jpg'))),1)
 
 if __name__=='__main__':unittest.main()

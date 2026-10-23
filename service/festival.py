@@ -7,6 +7,7 @@ import numpy as np
 from festival_settings import DEFAULT_OPTIONS, normalize_options
 from festival_weather import WeatherCache,weather_label
 from weather_icon import draw_weather_icon
+from local_report import make_report
 
 ROOT = Path(__file__).resolve().parent
 
@@ -61,7 +62,7 @@ class GestureLatch:
             if now-self.absent >= 1:self.armed=True
         return False
 
-def newspaper(photo, target, captured=None, weather=None):
+def newspaper(photo, target, captured=None, weather=None,report=None):
     from reportlab.pdfgen import canvas
     from reportlab.pdfbase import pdfmetrics
     from reportlab.pdfbase.ttfonts import TTFont
@@ -120,6 +121,7 @@ def newspaper(photo, target, captured=None, weather=None):
     text(74,147,'用一次亲身体验，留下今天的科技记忆',10.5,align='center')
     left=['基于 RDK S100，将摄像头画面','实时转化为动漫风格。比出 V 手势，','即可倒计时拍照，并自动生成、','打印专属科技节纪念报纸。']
     right=['看见 AI 的实时创作，','用一个手势留下此刻，','让科技节的体验与回忆，','成为一份可以带走的纪念。']
+    if report:right=[report]
     columns=[(x,[row for part in paragraph for row in wrap(part,10.5,limit)]) for x,paragraph,limit in [(8,left,62),(79,right,61)]]
     footer_min=27+(max(len(rows) for _,rows in columns)-1)*5.3
     image=Image.open(photo).convert('RGB');photo_height=min(140-footer_min-13,132*image.height/max(1,image.width));bottom=140-photo_height
@@ -129,7 +131,7 @@ def newspaper(photo, target, captured=None, weather=None):
     text(140,bottom-4.5,'AI 动漫留念',8.5,align='right')
     footer=bottom-13
     reverse_label(8,footer,62,'作品说明')
-    reverse_label(79,footer,61,'可看 · 可玩 · 可带走')
+    reverse_label(79,footer,61,'现场报道 · AI生成' if report else '可看 · 可玩 · 可带走')
     for x,rows in columns:
         for index,line in enumerate(rows):
             text(x,footer-8-index*5.3,line,10.5)
@@ -172,11 +174,13 @@ class Festival:
                 if remaining>0:return str(math.ceil(remaining))
                 self.min_sequence=self.latest()[0];self.deadline=None
             return '正在拍照…' if self.min_sequence is not None else ''
-    def accept(self, rgb, sequence):
+    def accept(self, rgb, sequence, original_bgr=None):
         with self.lock:
             if self.min_sequence is None or sequence<self.min_sequence:return
             self.min_sequence=None
-            try:self.jobs.put_nowait((rgb.copy(),dict(getattr(self,'configuration',lambda:DEFAULT_OPTIONS)())));self.shutter_at=time.monotonic();self.status='正在生成报纸…'
+            options=dict(getattr(self,'configuration',lambda:DEFAULT_OPTIONS)())
+            original=original_bgr.copy() if options.get('ai_report',False) and original_bgr is not None else None
+            try:self.jobs.put_nowait((rgb.copy(),options,original));self.shutter_at=time.monotonic();self.status='正在生成报纸…'
             except queue.Full:self.status='打印任务繁忙，请稍后再拍'
     def gesture_loop(self):
         try:
@@ -230,7 +234,7 @@ class Festival:
     def save_loop(self):
         from PIL import Image
         while self.running() or not self.jobs.empty():
-            try:rgb,options=self.jobs.get(timeout=.5)
+            try:rgb,options,original_bgr=self.jobs.get(timeout=.5)
             except queue.Empty:
                 if hasattr(self,'last_job') and self.configuration()['print_enabled']:
                     try:
@@ -246,7 +250,13 @@ class Festival:
             try:
                 photo=folder/'photo.jpg';Image.fromarray(rgb).save(photo,quality=96,subsampling=0)
                 self.history=(self.history+[photo])[-100:];self.notify(photo)
-                pdf=folder/'newspaper.pdf';weather=self.weather.snapshot() if hasattr(self,'weather') else None;newspaper(photo,pdf,weather=weather)
+                if options.get('ai_report',False):self.status='照片已保存，正在本地生成报道…'
+                original=folder/'original.jpg'
+                if options.get('ai_report',False) and original_bgr is not None:
+                    Image.fromarray(original_bgr[:,:,::-1]).save(original,quality=96,subsampling=0)
+                    record['report_source']='original.jpg'
+                report=make_report(original,options.get('ai_report',False));record['ai_report']=report;journal()
+                pdf=folder/'newspaper.pdf';weather=self.weather.snapshot() if hasattr(self,'weather') else None;newspaper(photo,pdf,weather=weather,report=report.get('text'))
                 record['weather']=weather
                 record['state']='submitting' if options['print_enabled'] else 'generating_pdf';journal()
                 record.update(dispatch_output(pdf,options));journal()
