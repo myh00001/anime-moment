@@ -40,15 +40,18 @@ def victory(points):
 
 class GestureLatch:
     def __init__(self):
-        self.armed=True; self.since=None; self.absent=None
+        self.armed=True; self.since=None; self.absent=None;self.last_hit=None;self.hits=0
     def update(self, detected, now):
         if detected:
             self.absent=None
-            if self.since is None:self.since=now
-            if self.armed and now-self.since >= .30:
+            if self.last_hit is None or now-self.last_hit>.65:
+                self.since=now;self.hits=0
+            self.last_hit=now;self.hits+=1
+            if self.armed and self.hits>=2 and now-self.since >= .30:
                 self.armed=False;return True
         else:
-            self.since=None
+            if self.last_hit is None or now-self.last_hit>.65:
+                self.since=None;self.hits=0
             if self.absent is None:self.absent=now
             if now-self.absent >= 1:self.armed=True
         return False
@@ -176,7 +179,7 @@ class Festival:
             from festival_vendor.mp_handpose import MPHandPose
             palm=MPPalmDet(str(ROOT/'models/palm_detection_mediapipe_2023feb.onnx'),scoreThreshold=.50,topK=32)
             hand=MPHandPose(str(ROOT/'models/handpose_estimation_mediapipe_2023feb.onnx'),confThreshold=.65)
-            latch=GestureLatch();last=-1;region_index=0;locked_region=None;region_shape=None
+            latch=GestureLatch();last=-1;region_index=0;locked_region=None;region_shape=None;locked_until=0
             while self.running():
                 start=time.monotonic();seq,frame=self.latest()
                 if frame is not None and seq!=last:
@@ -205,11 +208,11 @@ class Festival:
                                 pose=hand.infer(small,row)
                                 if pose is not None and victory(pose[67:130]):detected=True;break
                             if detected:
-                                locked_region=region;break
+                                locked_region=region;locked_until=time.monotonic()+.8;break
                             # Scan more small windows when affordable without allowing
                             # gesture search to monopolize CPU needed by the live image.
                             if scanned>=3 and time.monotonic()-start>=.15:break
-                        if not detected:locked_region=None
+                        if not detected and time.monotonic()>locked_until:locked_region=None
                     except cv2.error as error:print('GESTURE_FRAME',str(error)[:180],flush=True)
                     if latch.update(detected,time.monotonic()):self.trigger()
                 time.sleep(max(.02,.18-(time.monotonic()-start)))

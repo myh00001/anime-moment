@@ -5,6 +5,19 @@ from festival import GestureLatch,submit_print,victory,Festival,gesture_regions
 import numpy as np,threading,queue
 
 class FestivalTests(unittest.TestCase):
+ def test_short_detection_dropout_does_not_reset_confirmation(self):
+  latch=GestureLatch()
+  self.assertFalse(latch.update(True,0))
+  self.assertFalse(latch.update(False,.18))
+  self.assertTrue(latch.update(True,.36))
+  self.assertFalse(latch.update(True,.6))
+ def test_isolated_detections_do_not_trigger_photo(self):
+  latch=GestureLatch()
+  self.assertFalse(latch.update(True,0))
+  self.assertFalse(latch.update(False,.8))
+  self.assertFalse(latch.update(True,1))
+  self.assertFalse(latch.update(False,1.8))
+  self.assertFalse(latch.update(True,2))
  def test_global_scan_reaches_all_corners_first(self):
   for w,h in [(1920,1080),(1080,1920)]:
    regions=gesture_regions(w,h)
