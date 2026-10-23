@@ -8,6 +8,8 @@ def subject_box(faces,width,height,scale):
     face=max(faces,key=lambda f:float(f[2])*float(f[3]))
     x,y,w,h=[float(v)/scale for v in face[:4]]
     if w<12 or h<12:return None
+    # A face clipped by the bottom edge provides no evidence about clothing.
+    if height-(y+h)<.6*h:return None
     center=x+w/2
     box=(max(0,int(center-w*2.1)),max(0,int(y-h*.35)),
          min(width,int(center+w*2.1)),min(height,int(y+h*4.8)))

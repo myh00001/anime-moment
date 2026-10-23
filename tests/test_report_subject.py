@@ -12,6 +12,10 @@ class ReportSubjectTests(unittest.TestCase):
   box=subject_box([[10,10,20,25],[100,100,40,50]],1920,1080,1/3)
   self.assertLess(box[0],300);self.assertGreater(box[2],420)
   self.assertLess(box[1],300);self.assertGreater(box[3],450)
+ def test_face_only_at_bottom_does_not_invent_upper_body(self):
+  self.assertIsNone(subject_box([[100,1030,80,90]],1920,1080,1))
+  self.assertIsNone(subject_box([[100/3,1030/3,80/3,90/3]],1920,1080,1/3))
+  self.assertIsNotNone(subject_box([[100,800,80,90]],1920,1080,1))
  def test_portrait_and_edge_subjects_stay_inside_original(self):
   for width,height in [(1920,1080),(1080,1920)]:
    box=subject_box([[-4,200,70,90]],width,height,1/3)
