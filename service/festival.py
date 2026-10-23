@@ -5,6 +5,7 @@ from zoneinfo import ZoneInfo
 import json, math, os, queue, subprocess, threading, time, uuid
 import numpy as np
 from festival_settings import DEFAULT_OPTIONS, normalize_options
+from festival_weather import WeatherCache,weather_label
 
 ROOT = Path(__file__).resolve().parent
 
@@ -32,7 +33,7 @@ class GestureLatch:
             if now-self.absent >= 1:self.armed=True
         return False
 
-def newspaper(photo, target, captured=None):
+def newspaper(photo, target, captured=None, weather=None):
     from reportlab.pdfgen import canvas
     from reportlab.pdfbase import pdfmetrics
     from reportlab.pdfbase.ttfonts import TTFont
@@ -45,26 +46,45 @@ def newspaper(photo, target, captured=None):
     if 'FestivalChinese' not in pdfmetrics.getRegisteredFontNames():pdfmetrics.registerFont(TTFont('FestivalChinese',font))
     width,height=148*mm,210*mm
     c=canvas.Canvas(str(target),pagesize=(width,height));c.setTitle('北京市第六十五中学2026年校园科技节')
-    c.setFillColorRGB(.985,.977,.951);c.rect(0,0,width,height,fill=1,stroke=0)
-    c.setFillColorRGB(.10,.13,.16);c.setStrokeColorRGB(.10,.13,.16)
-    def text(x,y,s,size):c.setFont('FestivalChinese',size);c.drawString(x*mm,y*mm,s)
-    c.drawImage(str(ROOT/'assets/school-emblem.png'),8*mm,178*mm,23*mm,23*mm,preserveAspectRatio=True,anchor='c',mask='auto')
-    text(35,193,'六五校园科技报',23)
-    text(35,182,'2026 校园科技节 · 留念特刊',9)
-    c.setLineWidth(1.2);c.line(8*mm,174*mm,140*mm,174*mm)
-    text(8,163,'做中学科学 实践促创新',17)
-    text(8,154,'北京市第六十五中学2026年校园科技节',9.5)
+    c.setFillColorRGB(1,1,1);c.rect(0,0,width,height,fill=1,stroke=0)
+    c.setFillColorRGB(0,0,0);c.setStrokeColorRGB(0,0,0)
+    def text(x,y,s,size,font='FestivalChinese',align='left'):
+        c.setFont(font,size)
+        method={'left':c.drawString,'center':c.drawCentredString,'right':c.drawRightString}[align]
+        method(x*mm,y*mm,s)
+    def rule(y,weight=.5):c.setLineWidth(weight);c.line(8*mm,y*mm,140*mm,y*mm)
+    c.drawImage(str(ROOT/'assets/school-emblem.png'),8*mm,197*mm,8*mm,8*mm,preserveAspectRatio=True,anchor='c',mask='auto')
+    text(19,200,'北京市第六十五中学',7.2)
+    text(140,200,'2026 · 校园科技节特刊',7.2,align='right')
+    rule(195.5,1);rule(194.3,.4)
+    c.rect(8*mm,180.5*mm,132*mm,12.5*mm,fill=1,stroke=0)
+    c.setFillColorRGB(1,1,1);text(74,184,'六五校园科技报',23,align='center');c.setFillColorRGB(0,0,0)
     when=captured or datetime.now(ZoneInfo('Asia/Shanghai'))
-    text(8,145,'AI 动漫照相馆',8)
-    text(99,145,when.strftime('%Y年%m月%d日'),8)
-    image=Image.open(photo).convert('RGB');box=(8*mm,64*mm,132*mm,74.25*mm)
-    c.setFillColorRGB(1,1,1);c.rect(*box,fill=1,stroke=0)
+    text(8,176,when.strftime('%Y.%m.%d  %H:%M:%S'),7.4)
+    text(140,176,weather_label(weather,when),7.4,align='right');rule(173.5,.5)
+    text(74,161,'做中学科学 实践促创新',20,align='center')
+    text(74,148,'ALL EYES ON YOU',27,font='Helvetica-Bold',align='center')
+    text(74,140,'北京市第六十五中学2026年校园科技节',9,align='center')
+    rule(136,1.1);rule(134.6,.4)
+    image=Image.open(photo).convert('RGB');photo_height=min(98.,132*image.height/max(1,image.width));bottom=132-photo_height
+    box=(8*mm,bottom*mm,132*mm,photo_height*mm)
     c.drawImage(ImageReader(image),*box,preserveAspectRatio=True,anchor='c')
-    c.setFillColorRGB(.10,.13,.16);text(8,53,'今日科技主角',14)
-    text(8,43,'比一个 V，记录此刻的你。',10)
-    text(8,30,'当科学遇见创意，让想象成为画面。',9)
-    c.setLineWidth(.5);c.line(8*mm,18*mm,140*mm,18*mm)
-    text(8,11,'六五校园 · 科技与创意同行',8);text(106,11,when.strftime('%H:%M:%S')+'  留念',8)
+    text(8,bottom-4,'今日科技主角 / 每一帧都是你的头条',6.3)
+    text(140,bottom-4,'CAMPUS SCIENCE FESTIVAL',5.8,font='Helvetica-Bold',align='right')
+    rule(bottom-7,1);rule(bottom-8.3,.4)
+    footer=bottom-15
+    text(8,footer,'好奇，是探索的开始。',7)
+    text(8,footer-4.5,'在实践中发现，',6.5);text(8,footer-8.5,'在创造中成长。',6.5)
+    text(74,footer,'YOUNG MAKER',10,font='Helvetica-Bold',align='center')
+    text(74,footer-5,'做中学 · 实践创新',7,align='center')
+    text(74,footer-9,'SCIENCE / CREATE / EXPLORE',4.8,font='Helvetica',align='center')
+    text(101,footer,'让今天成为头条',7)
+    text(101,footer-4.5,'科学与创意，',6.5);text(101,footer-8.5,'在这里相遇。',6.5)
+    c.setLineWidth(.35)
+    for x in (52,96):c.line(x*mm,(footer-10)*mm,x*mm,(footer+3)*mm)
+    text(8,5.5,'AI 动漫留念 · 六五校园科技节',5.5)
+    source='天气：Open-Meteo' if weather_label(weather,when)!='北京 天气暂不可用' else '天气未联网更新'
+    text(140,5.5,source,5.5,align='right')
     c.showPage();c.save()
 
 def submit_print(pdf, runner=subprocess.run, printer='S100_Festival'):
@@ -83,6 +103,7 @@ class Festival:
     def __init__(self, latest, notify, running, configuration=lambda:dict(DEFAULT_OPTIONS)):
         self.latest=latest;self.notify=notify;self.running=running
         self.configuration=configuration
+        self.weather=WeatherCache(ROOT/'weather-cache.json',running)
         self.lock=threading.Lock();self.deadline=None;self.min_sequence=None
         self.status='比 ✌ 保持片刻，3 秒后拍照';self.jobs=queue.Queue(maxsize=2)
         self.directory=ROOT/'captures';self.directory.mkdir(exist_ok=True)
@@ -147,7 +168,8 @@ class Festival:
             try:
                 photo=folder/'photo.jpg';Image.fromarray(rgb).save(photo,quality=96,subsampling=0)
                 self.history=(self.history+[photo])[-100:];self.notify(photo)
-                pdf=folder/'newspaper.pdf';newspaper(photo,pdf)
+                pdf=folder/'newspaper.pdf';weather=self.weather.snapshot() if hasattr(self,'weather') else None;newspaper(photo,pdf,weather=weather)
+                record['weather']=weather
                 record['state']='submitting' if options['print_enabled'] else 'generating_pdf';journal()
                 record.update(dispatch_output(pdf,options));journal()
                 if record['state']=='submitted':
