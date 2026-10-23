@@ -23,9 +23,9 @@
 
 ```sh
 sudo lpadmin -p S100_Festival -E -v '<实际USB URI>' -m '<实际M452 PostScript驱动ID>'
-sudo lpadmin -p S100_Festival -o media-default=iso_a5_148x210mm -o orientation-requested-default=3 -o sides-default=one-sided -o HPPJLColorAsGray-default=off -o print-color-mode-default=color -o printer-is-shared=false
+sudo lpadmin -p S100_Festival -o media-default=iso_a5_148x210mm -o orientation-requested-default=4 -o sides-default=one-sided -o HPPJLColorAsGray-default=off -o print-color-mode-default=color -o printer-is-shared=false
 ```
 
-程序每次用 `lp -d S100_Festival -n 1` 显式指定A5、竖向、单面和彩色。纸盒中的物理放纸方向与PDF页面方向是两件事，纸盒纸型必须设置为A5。断电或拔线时已有任务等待重连，不要重复发送同一照片。
+程序每次用 `lp -d S100_Festival -n 1` 显式指定A5、横向纸张、单面和彩色（PDF内容保持竖版）。纸盒中的物理放纸方向与PDF页面方向是两件事，纸盒纸型必须设置为A5。断电或拔线时已有任务等待重连，不要重复发送同一照片。
 
 现场测试可以向正在运行的显示进程发送一次SIGUSR1，走同一个倒计时/拍摄/打印流程；该信号仅为本地管理员测试入口。开机启动和手动关闭后不重开的策略未改。

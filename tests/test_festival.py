@@ -40,6 +40,7 @@ class FestivalTests(unittest.TestCase):
   self.assertEqual(len(calls),1)
   self.assertIn('iso_a5_148x210mm',calls[0][calls[0].index('-o')+1])
   self.assertEqual(calls[0][calls[0].index('-n')+1],'1')
+  self.assertIn('orientation-requested=4',calls[0])
  def test_ambiguous_failure_is_not_retried(self):
   calls=[]
   def runner(*a,**kw):
