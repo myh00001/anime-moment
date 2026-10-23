@@ -68,7 +68,7 @@ def newspaper(photo, target, captured=None):
 
 def submit_print(pdf, runner=subprocess.run):
     """Exactly one submission attempt; ambiguous failures are never auto-retried."""
-    p=runner(['lp','-d','S100_Festival','-n','1','-o','media=iso_a5_148x210mm','-o','orientation-requested=3','-o','sides=one-sided','-o','HPPJLColorAsGray=off','-o','print-color-mode=color',str(pdf)],capture_output=True,text=True,timeout=30)
+    p=runner(['lp','-d','S100_Festival','-n','1','-o','media=iso_a5_148x210mm','-o','orientation-requested=3','-o','sides=one-sided','-o','media-type=stationery','-o','media-source=auto','-o','print-color-mode=color',str(pdf)],capture_output=True,text=True,timeout=30)
     if p.returncode:raise RuntimeError(p.stderr.strip() or '打印提交失败')
     return p.stdout.strip()
 

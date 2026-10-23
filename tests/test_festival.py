@@ -41,6 +41,8 @@ class FestivalTests(unittest.TestCase):
   self.assertIn('iso_a5_148x210mm',calls[0][calls[0].index('-o')+1])
   self.assertEqual(calls[0][calls[0].index('-n')+1],'1')
   self.assertIn('orientation-requested=3',calls[0])
+  self.assertIn('media-type=stationery',calls[0])
+  self.assertIn('media-source=auto',calls[0])
  def test_ambiguous_failure_is_not_retried(self):
   calls=[]
   def runner(*a,**kw):
