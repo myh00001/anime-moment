@@ -157,7 +157,7 @@ class Festival:
         self.latest=latest;self.notify=notify;self.running=running
         self.configuration=configuration
         self.weather=WeatherCache(ROOT/'weather-cache.json',running)
-        self.lock=threading.Lock();self.deadline=None;self.min_sequence=None;self.shutter_at=0;self.pickup_at=0
+        self.lock=threading.Lock();self.deadline=None;self.min_sequence=None;self.shutter_at=0;self.pickup_at=0;self.ai_busy_at=0;self.report_stage=''
         self.status='比 ✌ 即可开始 3 秒拍照倒计时';self.jobs=queue.Queue(maxsize=2)
         self.directory=ROOT/'captures';self.directory.mkdir(exist_ok=True)
         self.history=sorted(self.directory.glob('*/photo.jpg'))[-100:]
@@ -165,7 +165,7 @@ class Festival:
         self.detector=threading.Thread(target=self.gesture_loop,daemon=True);self.detector.start()
     def trigger(self):
         with self.lock:
-            if self.deadline is not None or self.min_sequence is not None or self.jobs.full():return False
+            if getattr(self,'ai_busy_at',0) or self.deadline is not None or self.min_sequence is not None or self.jobs.full():return False
             self.deadline=time.monotonic()+3;return True
     def tick(self):
         with self.lock:
@@ -180,8 +180,12 @@ class Festival:
             self.min_sequence=None
             options=dict(getattr(self,'configuration',lambda:DEFAULT_OPTIONS)())
             original=original_bgr.copy() if options.get('ai_report',False) and original_bgr is not None else None
-            try:self.jobs.put_nowait((rgb.copy(),options,original));self.shutter_at=time.monotonic();self.status='正在生成报纸…'
-            except queue.Full:self.status='打印任务繁忙，请稍后再拍'
+            try:
+                if options.get('ai_report',False):
+                    self.ai_busy_at=time.monotonic();self.report_stage='AI 正在生成报道';self.pickup_at=0
+                self.jobs.put_nowait((rgb.copy(),options,original));self.shutter_at=time.monotonic();self.status='正在生成报纸…'
+            except queue.Full:
+                self.ai_busy_at=0;self.report_stage='';self.status='打印任务繁忙，请稍后再拍'
     def gesture_loop(self):
         try:
             import cv2
@@ -243,11 +247,12 @@ class Festival:
                         elif 'idle' in p.stdout:self.status='打印队列就绪 · 比 ✌ 再拍一张'
                     except (OSError,subprocess.TimeoutExpired):pass
                 continue
-            folder=self.directory/(datetime.now(ZoneInfo('Asia/Shanghai')).strftime('%Y%m%d-%H%M%S')+'-'+uuid.uuid4().hex[:6]);folder.mkdir()
+            folder=self.directory/(datetime.now(ZoneInfo('Asia/Shanghai')).strftime('%Y%m%d-%H%M%S')+'-'+uuid.uuid4().hex[:6])
             record={'state':'saving','options':options}
             def journal():
                 temp=folder/'record.tmp';temp.write_text(json.dumps(record,ensure_ascii=False),encoding='utf-8');temp.replace(folder/'record.json')
             try:
+                folder.mkdir()
                 photo=folder/'photo.jpg';Image.fromarray(rgb).save(photo,quality=96,subsampling=0)
                 self.history=(self.history+[photo])[-100:];self.notify(photo)
                 if options.get('ai_report',False):self.status='照片已保存，正在本地生成报道…'
@@ -256,9 +261,11 @@ class Festival:
                     Image.fromarray(original_bgr[:,:,::-1]).save(original,quality=96,subsampling=0)
                     record['report_source']='original.jpg'
                 report=make_report(original,options.get('ai_report',False));record['ai_report']=report;journal()
+                if options.get('ai_report',False):self.report_stage='正在排版纪念报纸'
                 pdf=folder/'newspaper.pdf';weather=self.weather.snapshot() if hasattr(self,'weather') else None;newspaper(photo,pdf,weather=weather,report=report.get('text'))
                 record['weather']=weather
                 record['state']='submitting' if options['print_enabled'] else 'generating_pdf';journal()
+                if options.get('ai_report',False):self.report_stage='正在提交打印' if options['print_enabled'] else '正在保存报纸 PDF'
                 record.update(dispatch_output(pdf,options));journal()
                 if record['state']=='submitted':
                     self.pickup_at=time.monotonic()
@@ -267,4 +274,7 @@ class Festival:
             except Exception as error:
                 record.update(state='needs_attention',error=str(error));journal()
                 self.status='照片已保存；打印异常，请检查打印机';print('FESTIVAL_ERROR',str(error),flush=True)
-            finally:self.jobs.task_done()
+            finally:
+                if options.get('ai_report',False):
+                    with self.lock:self.ai_busy_at=0;self.report_stage=''
+                self.jobs.task_done()

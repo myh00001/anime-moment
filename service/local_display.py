@@ -237,7 +237,7 @@ class Player:
   if self.festival:
    now=time.monotonic();deadline=self.festival.deadline;shot=getattr(self.festival,'shutter_at',0)
    pickup=getattr(self.festival,'pickup_at',0)
-   draw_capture_hud(context,width,height,remaining=max(0,deadline-now) if deadline else None,shot_age=now-shot if shot else None,waiting=bool(self.countdown) and deadline is None,pickup_age=now-pickup if pickup else None)
+   draw_capture_hud(context,width,height,remaining=max(0,deadline-now) if deadline else None,shot_age=now-shot if shot else None,waiting=bool(self.countdown) and deadline is None,pickup_age=now-pickup if pickup else None,ai_age=now-self.festival.ai_busy_at if getattr(self.festival,'ai_busy_at',0) else None,report_stage=getattr(self.festival,'report_stage',''))
   return False
  def draw_panel(self,widget,context):
   context.save();context.set_source_rgba(0,0,0,0.45)
@@ -317,7 +317,7 @@ class Player:
    countdown=self.festival.tick()
    if countdown!=self.countdown:self.countdown=countdown;self.image.queue_draw();self.banner.queue_draw()
    if countdown:self.banner.queue_draw()
-   if countdown or time.monotonic()-getattr(self.festival,'shutter_at',0)<2 or time.monotonic()-getattr(self.festival,'pickup_at',0)<8.2:self.image.queue_draw()
+   if countdown or getattr(self.festival,'ai_busy_at',0) or time.monotonic()-getattr(self.festival,'shutter_at',0)<2 or time.monotonic()-getattr(self.festival,'pickup_at',0)<8.2:self.image.queue_draw()
    self.print_note.set_text(self.festival.status)
   self.label.set_text(self.message);self.label.set_visible(bool(self.message))
   if time.monotonic()-self.heartbeat>2:

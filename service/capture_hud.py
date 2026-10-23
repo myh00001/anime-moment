@@ -5,7 +5,7 @@ gi.require_version('Pango','1.0')
 gi.require_version('PangoCairo','1.0')
 from gi.repository import Pango,PangoCairo
 
-def draw_capture_hud(c,width,height,remaining=None,shot_age=None,waiting=False,pickup_age=None):
+def draw_capture_hud(c,width,height,remaining=None,shot_age=None,waiting=False,pickup_age=None,ai_age=None,report_stage=''):
     scale=min(width/1280,height/720)*1.3
     if scale<=0:return
     c.save();c.translate(width/2,height/2);c.scale(scale,scale)
@@ -48,7 +48,17 @@ def draw_capture_hud(c,width,height,remaining=None,shot_age=None,waiting=False,p
             c.set_source_rgba(.64,.93,.85,alpha);c.set_line_width(2.5)
             c.move_to(-72,-229);c.line_to(-67,-224);c.line_to(-57,-234);c.stroke()
             text('拍摄完成',-228,19,True,alpha)
-    if pickup_age is not None and 0<=pickup_age<8 and remaining is None and not waiting:
+    if ai_age is not None:
+        c.set_source_rgba(.025,.04,.055,.83)
+        c.rectangle(-250,-100,500,200);c.fill()
+        c.set_line_width(5);c.set_line_cap(1)
+        c.set_source_rgba(1,1,1,.18);c.arc(0,-46,20,0,2*math.pi);c.stroke()
+        angle=ai_age*3.6
+        c.set_source_rgba(.64,.93,.85,1);c.arc(0,-46,20,angle,angle+math.pi*1.4);c.stroke()
+        text(report_stage or 'AI 正在生成报道',4,30,True)
+        text('已等待 %d 秒 · 正在制作专属纪念报纸'%max(0,int(ai_age)),45,17,alpha=.88)
+        text('请稍候，完成前暂不接受拍照',76,17,alpha=.75)
+    if ai_age is None and pickup_age is not None and 0<=pickup_age<8 and remaining is None and not waiting:
         alpha=min(1,pickup_age/.2,(8-pickup_age)/.6)
         c.set_source_rgba(.025,.04,.055,.88*alpha)
         c.new_sub_path();c.arc(-230,191,18,math.pi,1.5*math.pi);c.arc(230,191,18,1.5*math.pi,2*math.pi)
