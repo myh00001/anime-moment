@@ -4,16 +4,18 @@ import re
 import subprocess
 from pathlib import Path
 
-DEFAULT_OPTIONS = {'gallery_count': 0, 'print_enabled': True, 'printer': 'S100_Festival'}
+DEFAULT_OPTIONS = {'gallery_count': 0, 'print_enabled': True, 'printer': 'S100_Festival', 'banner_height': 0}
 
 def normalize_options(value):
     count = value.get('gallery_count', 0)
     enabled = value.get('print_enabled', True)
     printer = value.get('printer', 'S100_Festival')
+    banner = value.get('banner_height', 0)
+    if type(banner) is not int or not 0 <= banner <= 1600: raise ValueError('横幅高度应为0至1600像素，0为自动')
     if type(count) is not int or not 0 <= count <= 20: raise ValueError('照片数量应为0至20')
     if type(enabled) is not bool: raise ValueError('打印开关无效')
     if not isinstance(printer, str) or not re.fullmatch(r'[A-Za-z0-9_.-]{1,127}', printer): raise ValueError('打印机名称无效')
-    return {'gallery_count': count, 'print_enabled': enabled, 'printer': printer}
+    return {'gallery_count': count, 'print_enabled': enabled, 'printer': printer, 'banner_height': banner}
 
 def load_options(path):
     try: return normalize_options(json.loads(Path(path).read_text(encoding='utf-8')))
@@ -49,3 +51,18 @@ def wall_geometry(width, height, requested=0, aspect=16/9):
         count = min(20, max(1, (height+gap)//(row_height+gap)))
         row_height = min(row_height, max(1, (height-gap*(count-1))//count))
     return {'width': column_width, 'count': count, 'row_height': row_height, 'gap': gap}
+
+def banner_geometry(width,height,requested=0,count=0,aspect=16/9,gallery_aspect=16/9):
+    """Solve header space and adaptive wall width together without resize feedback."""
+    width,height=max(1,width),max(1,height)
+    minimum=min(110,max(48,int(height*.12)),max(1,height//3))
+    maximum=max(minimum,int(height*.65))
+    if requested:return max(minimum,min(maximum,int(requested)))
+    low,high=1.,max(1.,height-minimum)
+    for _ in range(24):
+        middle=(low+high)/2
+        wall=wall_geometry(width,middle,count,gallery_aspect)['width']
+        needed=max(1,width-wall-14)/max(.2,aspect)
+        if middle<needed:low=middle
+        else:high=middle
+    return max(minimum,min(maximum,int(height-(low+high)/2)))

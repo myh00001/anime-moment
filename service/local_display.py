@@ -4,8 +4,9 @@ import sys,threading,time,json,re,subprocess,urllib.request
 from collections import deque
 from resource_monitor import ResourceMonitor,corner_action
 from display_settings import DEFAULT_SETTINGS,load_settings,save_settings,cover_geometry,output_dimensions
-from festival_settings import load_options,save_options,wall_geometry,list_printers
+from festival_settings import load_options,save_options,wall_geometry,list_printers,banner_geometry
 from capture_hud import draw_capture_hud
+from festival_banner import draw_banner
 ROOT=Path(__file__).resolve().parent
 sys.path.insert(0,str(ROOT/'vendor'))
 import cv2,numpy as np,gi
@@ -29,6 +30,9 @@ class Player:
   Gtk.StyleContext.add_provider_for_screen(Gdk.Screen.get_default(),css,Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
   self.box=Gtk.Box(orientation=Gtk.Orientation.VERTICAL);self.image=Gtk.DrawingArea();self.image.set_size_request(1,1);self.image.connect('draw',self.draw_frame);self.pixbuf=None;self.label=Gtk.Label(label=self.message)
   self.festival=None;self.countdown='';self.gallery_paths=[];self.gallery_cache={};self.wall_size=None;self.wall_pending=False
+  self.banner=Gtk.DrawingArea();self.banner.set_size_request(1,110);self.banner.connect('draw',self.draw_banner);self.banner_size=110
+  self.emblem=GdkPixbuf.Pixbuf.new_from_file_at_scale(str(ROOT/'assets/school-emblem.png'),256,256,True)
+  self.box.pack_start(self.banner,False,False,0)
   self.content=Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL,spacing=8);self.content.pack_start(self.image,True,True,0)
   self.sidebar=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=8);self.sidebar.set_size_request(235,1)
   self.gallery=Gtk.DrawingArea();self.gallery.set_size_request(1,1);self.gallery.connect('draw',self.draw_gallery);self.sidebar.pack_start(self.gallery,True,True,0)
@@ -82,10 +86,17 @@ class Player:
   return wall_geometry(self.content.get_allocated_width(),self.content.get_allocated_height(),self.festival_settings['gallery_count'],aspect)
  def layout_wall(self):
   self.wall_pending=False;geometry=self.gallery_geometry()
+  aspect=self.pixbuf.get_width()/self.pixbuf.get_height() if self.pixbuf else 16/9
+  header=banner_geometry(self.box.get_allocated_width(),self.box.get_allocated_height(),self.festival_settings.get('banner_height',0),self.festival_settings['gallery_count'],aspect)
+  if header!=self.banner_size:self.banner_size=header;self.banner.set_size_request(1,header)
   if self.wall_size!=geometry['width']:self.wall_size=geometry['width'];self.sidebar.set_size_request(self.wall_size,1)
   self.gallery.queue_draw()
   if hasattr(self,'festival_note'):
    self.festival_note.set_text(f"当前最多 {geometry['count']} 张，照片墙宽 {geometry['width']} 像素；新照片在上。")
+  return False
+ def draw_banner(self,widget,context):
+  deadline=self.festival.deadline if self.festival else None
+  draw_banner(context,widget.get_allocated_width(),widget.get_allocated_height(),self.emblem,max(0,deadline-time.monotonic()) if deadline else None,time.monotonic())
   return False
  def draw_gallery(self,widget,context):
   geometry=self.gallery_geometry();width=widget.get_allocated_width();height=widget.get_allocated_height()
@@ -115,6 +126,8 @@ class Player:
   apply=Gtk.Button(label='应用并保存');apply.connect('clicked',self.apply_festival_settings);grid.attach(apply,1,3,2,1)
   self.festival_note=Gtk.Label(label='照片墙宽度随数量和屏幕尺寸调整。',xalign=0);self.festival_note.set_line_wrap(True);self.festival_note.set_max_width_chars(35);grid.attach(self.festival_note,0,4,3,1)
   self.print_note=Gtk.Label(label='');self.print_note.set_line_wrap(True);self.print_note.set_max_width_chars(35);self.print_note.set_xalign(0);grid.attach(self.print_note,0,5,3,1)
+  self.banner_height=Gtk.SpinButton.new_with_range(0,1600,10);self.banner_height.set_numeric(True);self.banner_height.set_value(self.festival_settings.get('banner_height',0))
+  grid.attach(Gtk.Label(label='顶部横幅高度',xalign=0),0,6,1,1);grid.attach(self.banner_height,1,6,1,1);grid.attach(Gtk.Label(label='像素，0 = 自动'),2,6,1,1)
   self.pdf_only.connect('toggled',lambda button:self.printer_choice.set_sensitive(not button.get_active()));self.printer_choice.set_sensitive(not self.pdf_only.get_active())
   self.festival_expander.connect('notify::expanded',lambda *_:GLib.idle_add(self.resize_panel))
   self.refresh_printers()
@@ -127,7 +140,7 @@ class Player:
   for name in sorted(set(names+[selected])):self.printer_choice.append(name,name if name in names else name+'（未发现）')
   self.printer_choice.set_active_id(selected);return False
  def apply_festival_settings(self,*_):
-  value={'gallery_count':self.photo_count.get_value_as_int(),'print_enabled':not self.pdf_only.get_active(),'printer':self.printer_choice.get_active_id() or self.festival_settings['printer']}
+  value={'gallery_count':self.photo_count.get_value_as_int(),'print_enabled':not self.pdf_only.get_active(),'printer':self.printer_choice.get_active_id() or self.festival_settings['printer'],'banner_height':self.banner_height.get_value_as_int()}
   try:
    self.festival_settings=save_options(ROOT/'festival-settings.json',value);self.schedule_wall_layout()
    self.print_note.set_text('设置已保存；下一张照片仅保存 PDF。' if not value['print_enabled'] else '设置已保存；下一张使用 '+value['printer']+' 打印。')
@@ -206,7 +219,8 @@ class Player:
   if self.pixbuf is None:return False
   width=widget.get_allocated_width();height=widget.get_allocated_height();w=self.pixbuf.get_width();h=self.pixbuf.get_height()
   if min(width,height,w,h)<=0:return False
-  left,top,scale=cover_geometry(width,height,w,h)
+  scale=min(width/w,height/h);left=(width-w*scale)/2;top=(height-h*scale)/2
+  context.set_source_rgb(0,0,0);context.paint()
   context.save();context.rectangle(0,0,width,height);context.clip();context.translate(left,top);context.scale(scale,scale)
   Gdk.cairo_set_source_pixbuf(context,self.pixbuf,0,0);context.paint();context.restore()
   if self.festival:
@@ -287,7 +301,8 @@ class Player:
  def paint(self):
   if self.festival:
    countdown=self.festival.tick()
-   if countdown!=self.countdown:self.countdown=countdown;self.image.queue_draw()
+   if countdown!=self.countdown:self.countdown=countdown;self.image.queue_draw();self.banner.queue_draw()
+   if countdown:self.banner.queue_draw()
    if countdown or time.monotonic()-getattr(self.festival,'shutter_at',0)<2:self.image.queue_draw()
    self.print_note.set_text(self.festival.status)
   self.label.set_text(self.message);self.label.set_visible(bool(self.message))
@@ -298,6 +313,7 @@ class Player:
    if self.painted is rgb:return True
    self.painted=rgb
    self.pixbuf=GdkPixbuf.Pixbuf.new_from_bytes(GLib.Bytes.new(rgb.tobytes()),GdkPixbuf.Colorspace.RGB,False,8,w,h,w*3)
+   if self.paint_size!=(w,h):self.paint_size=(w,h);self.schedule_wall_layout()
    self.image.queue_draw()
    if self.panel_visible:self.info.queue_draw()
   return True

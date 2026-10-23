@@ -1,11 +1,20 @@
 import sys,tempfile,unittest
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'service'))
-from festival_settings import DEFAULT_OPTIONS,load_options,save_options,wall_geometry
+from festival_settings import DEFAULT_OPTIONS,load_options,save_options,wall_geometry,banner_geometry
 from festival import dispatch_output,submit_print
 from festival import Festival
 
 class PhotoWallSettingsTests(unittest.TestCase):
+ def test_banner_layout_is_bounded_and_preserves_preview_space(self):
+  for width,height in [(1920,1080),(1080,1920),(640,360)]:
+   for count in [0,1,3,8,20]:
+    banner=banner_geometry(width,height,0,count)
+    self.assertGreater(banner,0);self.assertLess(banner,height)
+    self.assertEqual(banner,banner_geometry(width,height,0,count))
+  banner=banner_geometry(1920,1080)
+  wall=wall_geometry(1920,1080-banner)['width']
+  self.assertLess(abs((1920-wall-14)/(1080-banner)-16/9),.01)
  def test_rows_fit_landscape_portrait_and_small_windows(self):
   for w,h in [(1920,1080),(1080,1920),(640,360),(200,120)]:
    for n in [0,1,3,7,20]:
@@ -19,7 +28,7 @@ class PhotoWallSettingsTests(unittest.TestCase):
  def test_options_survive_restart_and_bad_save_preserves_them(self):
   with tempfile.TemporaryDirectory() as directory:
    path=Path(directory)/'settings.json'
-   options={'gallery_count':5,'print_enabled':False,'printer':'Other_Printer'}
+   options={'gallery_count':5,'print_enabled':False,'printer':'Other_Printer','banner_height':180}
    save_options(path,options);self.assertEqual(load_options(path),options)
    with self.assertRaises(ValueError):save_options(path,dict(options,gallery_count=99))
    self.assertEqual(load_options(path),options)
