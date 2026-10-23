@@ -45,7 +45,7 @@ def newspaper(photo, target, captured=None, weather=None):
     if not font:raise RuntimeError('请安装中文字体 fonts-wqy-zenhei')
     if 'FestivalChinese' not in pdfmetrics.getRegisteredFontNames():pdfmetrics.registerFont(TTFont('FestivalChinese',font))
     width,height=148*mm,210*mm
-    c=canvas.Canvas(str(target),pagesize=(width,height));c.setTitle('北京市第六十五中学2026年校园科技节')
+    c=canvas.Canvas(str(target),pagesize=(width,height));c.setTitle('北京市第65中学2026年校园科技节')
     c.setFillColorRGB(1,1,1);c.rect(0,0,width,height,fill=1,stroke=0)
     c.setFillColorRGB(0,0,0);c.setStrokeColorRGB(0,0,0)
     def text(x,y,s,size,font='FestivalChinese',align='left'):
@@ -54,8 +54,8 @@ def newspaper(photo, target, captured=None, weather=None):
         method(x*mm,y*mm,s)
     def rule(y,weight=.5):c.setLineWidth(weight);c.line(8*mm,y*mm,140*mm,y*mm)
     c.drawImage(str(ROOT/'assets/school-emblem.png'),8*mm,185*mm,17*mm,17*mm,preserveAspectRatio=True,anchor='c',mask='auto')
-    text(30,191,'六五 · 科技现场',25)
-    text(30,182,'北京市第六十五中学2026年校园科技节',8.5)
+    text(30,191,'第65中学 · 科技现场',21)
+    text(30,182,'北京市第65中学2026年校园科技节',8.5)
     text(140,196,'2026',14,font='Helvetica-Bold',align='right')
     text(140,187,'校园纪念刊',7.5,align='right')
     rule(177,1)
@@ -78,7 +78,7 @@ def newspaper(photo, target, captured=None, weather=None):
     for index,(a,b) in enumerate(zip(left,right)):
         text(8,footer-7-index*4.5,a,7.7);text(79,footer-7-index*4.5,b,7.7)
     rule(16,.6)
-    text(8,10,'六五校园 · 在体验中学习，在实践中创新',6.2)
+    text(8,10,'第65中学 · 在体验中学习，在实践中创新',6.2)
     source='天气：Open-Meteo' if weather_label(weather,when)!='北京 天气暂不可用' else '天气未联网更新'
     text(140,10,source,5.5,align='right')
     c.showPage();c.save()
