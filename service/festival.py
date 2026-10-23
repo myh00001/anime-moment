@@ -6,6 +6,7 @@ import json, math, os, queue, subprocess, threading, time, uuid
 import numpy as np
 from festival_settings import DEFAULT_OPTIONS, normalize_options
 from festival_weather import WeatherCache,weather_label
+from weather_icon import draw_weather_icon
 
 ROOT = Path(__file__).resolve().parent
 
@@ -74,7 +75,10 @@ def newspaper(photo, target, captured=None, weather=None):
     rule(177,1)
     when=captured or datetime.now(ZoneInfo('Asia/Shanghai'))
     text(8,172,when.strftime('%Y.%m.%d  %H:%M:%S'),8.6)
-    text(140,172,weather_label(weather,when),8.6,align='right')
+    available=weather_label(weather,when)!='北京 天气暂不可用'
+    text(103,172,'北京',8.6)
+    draw_weather_icon(c,113*mm,169.6*mm,7.2*mm,int(weather['code']) if available else None)
+    text(140,172,f"{float(weather['temperature']):.0f}°C" if available else '暂无',8.6,align='right')
     c.rect(8*mm,153*mm,132*mm,12*mm,fill=1,stroke=0);c.setFillColorRGB(1,1,1)
     text(74,156.5,'做中学科学 实践促创新',22,align='center');c.setFillColorRGB(0,0,0)
     text(74,147,'用一次亲身体验，留下今天的科技记忆',10,align='center')
