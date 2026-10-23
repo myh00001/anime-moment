@@ -76,34 +76,47 @@ class LocalReporter:
         deadline=time.monotonic()+self.timeout
         use_bpu=bpu_available()
         self.backend='S100 BPU vision + CPU text' if use_bpu else 'CPU vision + CPU text'
+        prefill=False
+        if use_bpu:
+            prefill=self.can_prefill(photo)
+            if self.prefill_subject is not None and self.prefill_subject['subject_visible'] is False:
+                from report_bpu_caption import model_profile
+                self.subject=self.prefill_subject
+                self.last_caption='No reliable subject for clothing description.'
+                self.vision_seconds=0;self.vision_model=(model_profile() or {}).get('name','unknown')
+                self.vision_decoder='not run'
+                return '镜头定格了现场的一刻，AI动漫拍照为科技节留下专属纪念。'
         self.starter()
         # Load the writer while the independent BPU observation runs.
         if not use_bpu:self.wait_ready(deadline,use_bpu)
         if use_bpu:
-            left=deadline-time.monotonic()
-            helper=Path(__file__).with_name('report_bpu_caption.py')
-            command=['bash','-c','source /opt/tros/humble/setup.bash && exec python3 "$@"',
-                     'festival-bpu-report',str(helper),str(photo),str(max(.1,min(25,left-3)))]
-            process=subprocess.Popen(command,stdout=subprocess.PIPE,stderr=subprocess.PIPE,start_new_session=True)
-            try:
-                output,_=process.communicate(timeout=max(.1,left))
-            except subprocess.TimeoutExpired:
-                import signal
-                os.killpg(process.pid,signal.SIGTERM)
-                try:process.communicate(timeout=3)
-                except subprocess.TimeoutExpired:os.killpg(process.pid,signal.SIGKILL);process.communicate()
-                raise TimeoutError('BPU看图超时')
-            if process.returncode:raise RuntimeError('BPU看图失败')
-            observation=json.loads(output);self.last_caption=observation['text'];self.vision_seconds=observation['seconds']
-            self.vision_model=observation.get('model','unknown')
-            self.vision_decoder=observation.get('decoder','official')
-            self.subject={key:observation[key] for key in ('subject_visible','faces','source_box') if key in observation}
-            if observation.get('subject_visible') is False:
-                return '镜头定格了现场的一刻，AI动漫拍照为科技节留下专属纪念。'
-            if observation.get('subject_visible') is True:
-                scoped=upper_clothing_observation(self.last_caption)
-                if scoped is None:return '镜头留下了体验中的一刻，AI动漫拍照将科技节的记忆化为专属纪念。'
-                self.last_caption=scoped
+            from concurrent.futures import ThreadPoolExecutor
+            with ThreadPoolExecutor(max_workers=1) as pool:
+                if prefill:pool.submit(self.prefill_writer,deadline)
+                left=deadline-time.monotonic()
+                helper=Path(__file__).with_name('report_bpu_caption.py')
+                command=['bash','-c','source /opt/tros/humble/setup.bash && exec python3 "$@"',
+                         'festival-bpu-report',str(helper),str(photo),str(max(.1,min(25,left-3)))]
+                process=subprocess.Popen(command,stdout=subprocess.PIPE,stderr=subprocess.PIPE,start_new_session=True)
+                try:
+                    output,_=process.communicate(timeout=max(.1,left))
+                except subprocess.TimeoutExpired:
+                    import signal
+                    os.killpg(process.pid,signal.SIGTERM)
+                    try:process.communicate(timeout=3)
+                    except subprocess.TimeoutExpired:os.killpg(process.pid,signal.SIGKILL);process.communicate()
+                    raise TimeoutError('BPU看图超时')
+                if process.returncode:raise RuntimeError('BPU看图失败')
+                observation=json.loads(output);self.last_caption=observation['text'];self.vision_seconds=observation['seconds']
+                self.vision_model=observation.get('model','unknown')
+                self.vision_decoder=observation.get('decoder','official')
+                self.subject={key:observation[key] for key in ('subject_visible','faces','source_box') if key in observation}
+                if observation.get('subject_visible') is False:
+                    return '镜头定格了现场的一刻，AI动漫拍照为科技节留下专属纪念。'
+                if observation.get('subject_visible') is True:
+                    scoped=upper_clothing_observation(self.last_caption)
+                    if scoped is None:return '镜头留下了体验中的一刻，AI动漫拍照将科技节的记忆化为专属纪念。'
+                    self.last_caption=scoped
         else:
             with Image.open(photo) as source:
                 image=source.convert('RGB');image.thumbnail((448,448))
@@ -123,6 +136,33 @@ class LocalReporter:
             'grammar':'root ::= [一-鿿] [一-鿿，。！？、：；“”‘’（）0-9 ]{5,95}',
             'chat_template_kwargs':{'enable_thinking':False}}
         return validate_clothing(clean_report(self.complete(WRITER_ENDPOINT,payload,deadline)),self.last_caption)
+    def writer_cache_ready(self,timeout):
+        try:
+            with self.opener.open(WRITER_ENDPOINT+'/slots',timeout=timeout) as response:
+                slots=json.load(response)
+            if not isinstance(slots,list) or not slots:return None
+            if not all(isinstance(slot,dict) and 'id' in slot and 'n_ctx' in slot for slot in slots):return None
+            return any(slot.get('is_processing',False) or int(slot.get('n_prompt_tokens') or 0)>0 for slot in slots)
+        except (OSError,ValueError,TypeError,KeyError):return None
+    def can_prefill(self,photo):
+        self.prefill_subject=None
+        if not Path(photo).is_file():return False
+        if self.writer_cache_ready(.1) is True:return False
+        import tempfile
+        from report_subject import prepare_subject
+        root=Path(__file__).resolve().parent
+        try:
+            with tempfile.TemporaryDirectory(prefix='prefill-subject-') as folder:
+                self.prefill_subject=prepare_subject(photo,Path(folder)/'view.jpg',512,root)
+                return self.prefill_subject['subject_visible']
+        except Exception:return False
+    def prefill_writer(self,deadline):
+        self.wait_ready(deadline,True)
+        if self.writer_cache_ready(min(2,max(.1,deadline-time.monotonic()))) is not False:return
+        payload={'model':'local-report-writer','messages':[{'role':'system','content':PROMPT},
+            {'role':'user','content':'画面观察：'}],'max_tokens':1,'temperature':0,'stream':False,
+            'chat_template_kwargs':{'enable_thinking':False}}
+        self.complete(WRITER_ENDPOINT,payload,deadline)
     def wait_ready(self,deadline,use_bpu):
         while True:
             left=deadline-time.monotonic()
@@ -162,3 +202,5 @@ def make_report(photo,enabled,reporter=None):
     except Exception as error:
         return {'enabled':True,'state':'fallback','reason':type(error).__name__,
                 'seconds':round(time.monotonic()-start,2)}
+
+

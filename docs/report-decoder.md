@@ -32,3 +32,16 @@ with the optional decoder, from saved original to printable PDF. Both
 candidate reports passed garment validation. These times exclude camera
 countdown, cold process loading and physical printing. An earlier health-only
 warmup left the prompt cache cold and is not used as a speedup claim.
+
+The reporter can also prefill the fixed Chinese system prompt while vision is
+running, but only when the local server confirms an empty, idle prompt cache
+and a reliable upper body is visible. Cached, busy or unknown slot states do
+not trigger prefill. The background task is joined before completion, early
+return or vision failure. No image is sent with this one-token prefill request.
+
+In a repeated two-photo cold/warm comparison, cold saved-original-to-PDF time
+fell from 11.818/11.326 seconds to 9.094/9.150 seconds. Warm requests showed no
+regression in these samples. Unconditional prefill was rejected because it
+made warm requests slower. A confirmed no-subject probe returns neutral copy
+without starting either model, reducing that report stage from about 1.06 to
+0.11–0.16 seconds. These are small local measurements, not latency guarantees.
