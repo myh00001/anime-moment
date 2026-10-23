@@ -50,6 +50,12 @@ def clean_report(value):
 def upper_clothing_observation(value):
     """Restrict upper-body views to a garment category, excluding unseen lower body."""
     source=value.lower()
+    # A mentioned category is not evidence when the caption hedges or negates it.
+    if re.search(r"\b(maybe|perhaps|possibly|probably|unclear|uncertain)\b|"
+                 r"\b(could|might|may)\s+be\b|\b(?:cannot|can't|hard to)\s+(?:tell|see)\b|"
+                 r"\b(?:no|not|without)\b.{0,35}\b(?:person|jacket|coat|hoodie|sweater|shirt)\b|"
+                 r"\b(?:jacket|coat|hoodie|sweater|shirt)\b.{0,20}\bor\b",source):
+        return None
     for pattern,label in [(r'\bjacket\b','jacket'),(r'\bcoat\b','coat'),
                           (r'\bhoodie\b','hoodie'),(r'\bsweater\b','sweater'),
                           (r'\bt-?shirt\b','t-shirt'),(r'\bshirt\b','shirt')]:

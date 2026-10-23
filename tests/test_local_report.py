@@ -68,6 +68,13 @@ class LocalReportTests(unittest.TestCase):
   self.assertEqual(validate_clothing('体验者身穿夹克。','A blue jacket.'),'体验者身穿夹克。')
   self.assertEqual(validate_clothing('体验者身穿连衣裙。','A person wearing a dress.'),'体验者身穿连衣裙。')
 
+ def test_uncertain_or_negated_garments_do_not_become_facts(self):
+  for caption in ['Maybe a jacket.', 'It might be a shirt.',
+                  'Cannot tell if this is a jacket.', 'No person in a jacket.',
+                  'Not wearing a jacket, wearing a shirt.', 'A jacket or sweater.']:
+   with self.subTest(caption=caption):self.assertIsNone(upper_clothing_observation(caption))
+  self.assertEqual(upper_clothing_observation('A person wears a blue jacket.'),'The visible person wears a jacket.')
+
  def test_cached_environment_launches_original_photo_without_shell(self):
   reporter=LocalReporter(starter=Mock());process=Mock();process.returncode=0
   process.communicate.return_value=(json.dumps({'text':'A blue jacket.','seconds':3}).encode(),b'')
