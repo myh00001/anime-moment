@@ -124,9 +124,12 @@ def newspaper(photo, target, captured=None, weather=None,report=None):
     if report:right=[report]
     columns=[(x,[row for part in paragraph for row in wrap(part,10.5,limit)]) for x,paragraph,limit in [(8,left,62),(79,right,61)]]
     footer_min=27+(max(len(rows) for _,rows in columns)-1)*5.3
-    image=Image.open(photo).convert('RGB');photo_height=min(140-footer_min-13,132*image.height/max(1,image.width));bottom=140-photo_height
+    with Image.open(photo) as source:
+        photo_height=min(140-footer_min-13,132*source.height/max(1,source.width))
+        image=str(photo) if source.format=='JPEG' and source.mode=='RGB' else ImageReader(source.convert('RGB'))
+    bottom=140-photo_height
     box=(8*mm,bottom*mm,132*mm,photo_height*mm)
-    c.drawImage(ImageReader(image),*box,preserveAspectRatio=True,anchor='c')
+    c.drawImage(image,*box,preserveAspectRatio=True,anchor='c')
     text(8,bottom-4.5,'镜头里的科技节',9)
     text(140,bottom-4.5,'AI 动漫留念',8.5,align='right')
     footer=bottom-13
