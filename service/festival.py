@@ -26,7 +26,7 @@ class GestureLatch:
         if detected:
             self.absent=None
             if self.since is None:self.since=now
-            if self.armed and now-self.since >= .45:
+            if self.armed and now-self.since >= .30:
                 self.armed=False;return True
         else:
             self.since=None
@@ -155,8 +155,8 @@ class Festival:
             import cv2
             from festival_vendor.mp_palmdet import MPPalmDet
             from festival_vendor.mp_handpose import MPHandPose
-            palm=MPPalmDet(str(ROOT/'models/palm_detection_mediapipe_2023feb.onnx'),scoreThreshold=.65,topK=32)
-            hand=MPHandPose(str(ROOT/'models/handpose_estimation_mediapipe_2023feb.onnx'),confThreshold=.8)
+            palm=MPPalmDet(str(ROOT/'models/palm_detection_mediapipe_2023feb.onnx'),scoreThreshold=.50,topK=32)
+            hand=MPHandPose(str(ROOT/'models/handpose_estimation_mediapipe_2023feb.onnx'),confThreshold=.65)
             latch=GestureLatch();last=-1
             while self.running():
                 start=time.monotonic();seq,frame=self.latest()
@@ -169,7 +169,7 @@ class Festival:
                             if pose is not None and victory(pose[67:130]):detected=True;break
                     except cv2.error as error:print('GESTURE_FRAME',str(error)[:180],flush=True)
                     if latch.update(detected,time.monotonic()):self.trigger()
-                time.sleep(max(.02,.30-(time.monotonic()-start)))
+                time.sleep(max(.02,.18-(time.monotonic()-start)))
         except Exception as error:
             self.status='手势识别不可用，可按空格拍照';print('GESTURE_ERROR',str(error),flush=True)
     def save_loop(self):
