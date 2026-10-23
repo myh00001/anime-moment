@@ -33,3 +33,11 @@ its total-time results were not used to claim a gain.
 The full 73-test suite passed, including success-only caching, current-variable
 merging, invalid environment fallback, retry after failure, deadline accounting,
 direct launch with the original photo and existing process cleanup tests.
+
+A subsequent four-call check stopped the Chinese writer before each call.
+Baseline report-plus-PDF times were 10.831 and 9.591 seconds; current first
+environment capture and cached calls took 9.105 and 8.874 seconds. All four
+image observations were identical; Chinese wording varied, but all reports
+passed the clothing consistency guard and none claimed a dress. Vision-stage
+timing also varied substantially (4.964–6.395 seconds), so this small cold-start
+check supports compatibility, not an isolated speedup estimate.
