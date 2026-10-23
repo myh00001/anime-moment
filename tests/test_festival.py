@@ -5,15 +5,17 @@ from festival import GestureLatch,submit_print,victory,Festival,gesture_regions
 import numpy as np,threading,queue
 
 class FestivalTests(unittest.TestCase):
- def test_first_detection_triggers_without_holding(self):
+ def test_continuous_half_second_required(self):
   latch=GestureLatch()
-  self.assertTrue(latch.update(True,0))
-  self.assertFalse(latch.update(False,.18))
-  self.assertFalse(latch.update(True,.36))
-  self.assertFalse(latch.update(True,.6))
+  self.assertFalse(latch.update(True,0))
+  self.assertFalse(latch.update(True,.3))
+  self.assertFalse(latch.update(True,.49))
+  self.assertTrue(latch.update(True,.5))
+  self.assertFalse(latch.update(True,.8))
  def test_brief_dropout_cannot_rearm_shutter(self):
   latch=GestureLatch()
-  self.assertTrue(latch.update(True,0))
+  self.assertFalse(latch.update(True,0))
+  self.assertTrue(latch.update(True,.5))
   self.assertFalse(latch.update(False,.8))
   self.assertFalse(latch.update(True,1))
   self.assertFalse(latch.update(False,1.8))
@@ -56,13 +58,13 @@ class FestivalTests(unittest.TestCase):
   f.accept(frame,11);self.assertEqual(f.jobs.qsize(),1)
  def test_held_gesture_cannot_repeat(self):
   latch=GestureLatch()
-  self.assertTrue(latch.update(True,0))
-  self.assertFalse(latch.update(True,.5))
+  self.assertFalse(latch.update(True,0))
+  self.assertTrue(latch.update(True,.5))
   self.assertFalse(latch.update(True,10))
   self.assertFalse(latch.update(False,11))
   self.assertFalse(latch.update(False,12.1))
-  self.assertTrue(latch.update(True,13))
-  self.assertFalse(latch.update(True,13.5))
+  self.assertFalse(latch.update(True,13))
+  self.assertTrue(latch.update(True,13.5))
  def test_one_print_submission(self):
   calls=[]
   def runner(args,**kwargs):

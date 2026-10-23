@@ -40,13 +40,15 @@ def victory(points):
 
 class GestureLatch:
     def __init__(self):
-        self.armed=True; self.absent=None
+        self.armed=True; self.absent=None; self.since=None
     def update(self, detected, now):
         if detected:
             self.absent=None
-            if self.armed:
+            if self.since is None:self.since=now
+            if self.armed and now-self.since >= .5:
                 self.armed=False;return True
         else:
+            self.since=None
             if self.absent is None:self.absent=now
             if now-self.absent >= 1:self.armed=True
         return False
