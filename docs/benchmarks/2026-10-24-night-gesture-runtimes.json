@@ -1,0 +1,162 @@
+{
+  "scope": "Isolated gesture runtime candidates; production unchanged",
+  "ort_live_abba": [
+    {
+      "variant": "baseline-A",
+      "samples": 25,
+      "faces": [
+        0
+      ],
+      "palm_calls_per_second": 8.57,
+      "pose_calls_per_second": 2.455,
+      "fps": {
+        "mean": 8.53,
+        "min": 8.398,
+        "max": 8.721
+      },
+      "processing_ms": {
+        "mean": 206.747,
+        "min": 182.895,
+        "max": 242.439
+      },
+      "latency_ms": {
+        "mean": 222.358,
+        "min": 197.738,
+        "max": 256.57
+      },
+      "cpu_percent": {
+        "mean": 85.179,
+        "min": 80.813,
+        "max": 100
+      },
+      "bpu_percent": {
+        "mean": 28.28,
+        "min": 25.0,
+        "max": 33.0
+      }
+    },
+    {
+      "variant": "ort-A",
+      "samples": 25,
+      "faces": [
+        0
+      ],
+      "palm_calls_per_second": 11.674,
+      "pose_calls_per_second": 3.648,
+      "fps": {
+        "mean": 8.444,
+        "min": 7.391,
+        "max": 8.687
+      },
+      "processing_ms": {
+        "mean": 203.549,
+        "min": 185.953,
+        "max": 230.293
+      },
+      "latency_ms": {
+        "mean": 219.328,
+        "min": 200.73,
+        "max": 247.22
+      },
+      "cpu_percent": {
+        "mean": 84.354,
+        "min": 75.0,
+        "max": 87.418
+      },
+      "bpu_percent": {
+        "mean": 27.76,
+        "min": 24.0,
+        "max": 34.0
+      }
+    },
+    {
+      "variant": "ort-B",
+      "samples": 25,
+      "faces": [
+        0
+      ],
+      "palm_calls_per_second": 11.399,
+      "pose_calls_per_second": 3.412,
+      "fps": {
+        "mean": 8.63,
+        "min": 7.97,
+        "max": 9.174
+      },
+      "processing_ms": {
+        "mean": 205.055,
+        "min": 178.035,
+        "max": 241.47
+      },
+      "latency_ms": {
+        "mean": 220.277,
+        "min": 192.461,
+        "max": 256.135
+      },
+      "cpu_percent": {
+        "mean": 86.015,
+        "min": 83.144,
+        "max": 100
+      },
+      "bpu_percent": {
+        "mean": 27.6,
+        "min": 23.0,
+        "max": 33.0
+      }
+    },
+    {
+      "variant": "baseline-B",
+      "samples": 25,
+      "faces": [
+        0
+      ],
+      "palm_calls_per_second": 8.571,
+      "pose_calls_per_second": 2.413,
+      "fps": {
+        "mean": 8.481,
+        "min": 8.023,
+        "max": 8.715
+      },
+      "processing_ms": {
+        "mean": 207.468,
+        "min": 169.975,
+        "max": 264.26
+      },
+      "latency_ms": {
+        "mean": 222.569,
+        "min": 184.87,
+        "max": 277.531
+      },
+      "cpu_percent": {
+        "mean": 85.114,
+        "min": 82.208,
+        "max": 100
+      },
+      "bpu_percent": {
+        "mean": 28.92,
+        "min": 24.0,
+        "max": 31.0
+      }
+    }
+  ],
+  "public_palm_fixture": {
+    "source": "OpenCV Zoo public palm demonstration",
+    "views": 42
+  },
+  "limitations": [
+    "No demonstrated live FPS gain from ORT",
+    "Public annotated V screenshot not recognized by either CPU backend; not a positive parity pass",
+    "BPU quantization and NV12 conversion alter detections; not deployed"
+  ],
+  "palm-public-validation.json": {
+    "views": 42,
+    "same_detection_count": 28,
+    "cpu_ms_median": 104.9694385001203,
+    "bpu_ms_median": 11.345461000018986
+  },
+  "palm-public-fullrange-validation.json": {
+    "views": 42,
+    "same_detection_count": 39,
+    "cpu_ms_median": 96.37109099821828,
+    "bpu_ms_median": 10.929096499239677
+  }
+}
