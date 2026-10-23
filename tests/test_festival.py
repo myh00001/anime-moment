@@ -1,10 +1,18 @@
 import sys,unittest
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'service'))
-from festival import GestureLatch,submit_print,victory,Festival
+from festival import GestureLatch,submit_print,victory,Festival,gesture_regions
 import numpy as np,threading,queue
 
 class FestivalTests(unittest.TestCase):
+ def test_distant_hand_windows_cover_landscape_and_portrait(self):
+  for width,height in [(1920,1080),(1080,1920),(640,480)]:
+   covered=np.zeros((height,width),dtype=bool)
+   for x1,y1,x2,y2 in gesture_regions(width,height):
+    self.assertTrue(0<=x1<x2<=width and 0<=y1<y2<=height)
+    self.assertLessEqual(x2-x1,min(width,height)*.75)
+    covered[y1:y2,x1:x2]=True
+   self.assertTrue(covered.all())
  def test_victory_geometry_survives_rotation(self):
   p=np.zeros((21,3))
   for base,x in [(5,-1.5),(9,-.5),(13,.5),(17,1.5)]:
