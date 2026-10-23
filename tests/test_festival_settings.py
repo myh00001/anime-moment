@@ -74,6 +74,29 @@ class PhotoWallSettingsTests(unittest.TestCase):
    self.assertEqual(len(list(Path(folder).glob('*/original.jpg'))),1)
    self.assertEqual(f.ai_busy_at,0);self.assertTrue(f.trigger())
 
+ def test_ai_disabled_still_saves_original_and_anime(self):
+  import queue,threading,numpy as np
+  from unittest.mock import patch
+  from PIL import Image
+  with tempfile.TemporaryDirectory() as folder:
+   f=Festival.__new__(Festival);f.lock=threading.Lock();f.min_sequence=10;f.jobs=queue.Queue()
+   f.configuration=lambda:dict(DEFAULT_OPTIONS,print_enabled=False,ai_report=False)
+   f.deadline=None;f.running=lambda:False;f.directory=Path(folder);f.history=[];f.notify=lambda photo:None
+   anime=np.zeros((4,4,3),np.uint8);anime[:,:,0]=255
+   raw=np.zeros((4,4,3),np.uint8);raw[:,:,0]=255 # BGR blue, different from anime RGB red.
+   f.accept(anime,9,raw);self.assertTrue(f.jobs.empty())
+   f.accept(anime,10,raw)
+   def report(path,enabled):
+    self.assertFalse(enabled);self.assertEqual(path.name,'original.jpg')
+    pixel=Image.open(path).getpixel((0,0));self.assertGreater(pixel[2],240);self.assertLess(pixel[0],10)
+    return {'state':'generated','text':'test'}
+   def paper(photo,pdf,**kwargs):
+    self.assertEqual(photo.name,'photo.jpg')
+    self.assertGreater(Image.open(photo).getpixel((0,0))[0],240)
+    pdf.write_bytes(b'test')
+   with patch('festival.make_report',side_effect=report),patch('festival.newspaper',side_effect=paper):f.save_loop()
+   self.assertEqual(len(list(Path(folder).glob('*/original.jpg'))),1)
+
  def test_ai_failure_unlocks_capture_without_pickup_prompt(self):
   import queue,threading,numpy as np
   from unittest.mock import patch

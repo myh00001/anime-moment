@@ -179,7 +179,7 @@ class Festival:
             if self.min_sequence is None or sequence<self.min_sequence:return
             self.min_sequence=None
             options=dict(getattr(self,'configuration',lambda:DEFAULT_OPTIONS)())
-            original=original_bgr.copy() if options.get('ai_report',False) and original_bgr is not None else None
+            original=original_bgr.copy() if original_bgr is not None else None
             try:
                 if options.get('ai_report',False):
                     self.ai_busy_at=time.monotonic();self.report_stage='AI 正在生成报道';self.pickup_at=0
@@ -257,7 +257,7 @@ class Festival:
                 self.history=(self.history+[photo])[-100:];self.notify(photo)
                 if options.get('ai_report',False):self.status='照片已保存，正在本地生成报道…'
                 original=folder/'original.jpg'
-                if options.get('ai_report',False) and original_bgr is not None:
+                if original_bgr is not None:
                     Image.fromarray(original_bgr[:,:,::-1]).save(original,quality=96,subsampling=0)
                     record['report_source']='original.jpg'
                 report=make_report(original,options.get('ai_report',False));record['ai_report']=report;journal()
