@@ -49,7 +49,7 @@
 - **手势拍照**：配置专用手势 HBM 模型时，使用 HaGRID YOLOv10n 在 BPU 上直接识别 V 手势，持续识别约 **0.1 秒**后确认；未配置或加载失败时尝试回退到 CPU 手部关键点识别。
 - **原图与动漫图同时保存**：是否启用 AI 报道，都保留同次拍摄的摄像头原图和动漫照片。
 - **纪念报纸**：生成 A5 竖版 PDF，包含照片、活动内容、拍摄时间、地点与天气，可自动打印或稍后补打。
-- **本地 AI 看图报道**：可根据同次拍摄的原图生成短报道；关闭或生成失败时使用固定文案。
+- **本地或云端 AI 看图报道**：可根据同次拍摄的原图生成短报道；关闭或生成失败时使用固定文案。
 - **照片墙与全屏预览**：新照片在前，支持缩放、拖动和独立打印。
 - **打印队列管理**：查看所选打印机的任务数量，一键取消未完成任务。
 - **自动或手动地点天气**：支持 IP 定位、联网天气、省市区县选择及手动天气和温度。
@@ -63,7 +63,7 @@
 | 分类 | 可设置的内容 |
 | --- | --- |
 | 画面与摄像头 | 输出分辨率、顺时针旋转、镜像、恢复默认 |
-| 拍照与 AI 报道 | 手动倒计时拍照、启用或关闭本地 AI 报道 |
+| 拍照与 AI 报道 | 手动倒计时拍照、启用报道、选择本地模型或 DeepSeek 云端、设置 API key |
 | 打印与文件保存 | 自动打印开关、打印机选择、刷新打印机、队列数量、清空队列 |
 | 城市与天气 | 自动或手动城市、地点打印范围、自动或手动天气、温度 |
 | 照片墙与广告栏 | 照片墙数量、顶部横幅高度；0 表示自动适配 |
@@ -87,7 +87,7 @@
 
 自动天气超过 **3 小时**或跨天后不再作为当前天气显示。IP 定位反映网络出口附近，不能保证精确到现场所在区县；查不到区县时不补造名称。
 
-点击 **“保存城市与天气 · 立即更新”**后，下一张报纸使用新设置。已生成的报纸保留拍摄时的信息。接口与数据来源见[城市与天气说明](docs/weather.md)。
+点击 **“保存城市与天气 · 立即更新”**后，下一张报纸使用新设置。已生成的报纸保留拍摄时的信息。自动地点与天气会访问外部服务，联网不可用时可改为手动设置。
 
 ### 打印与队列
 
@@ -97,138 +97,110 @@
 
 打印机缺纸、缺墨或长时间离线时，可点击 **“清空打印队列”**，取消所选打印机的未完成任务，避免恢复后继续输出积压文件。清空队列不会删除照片或 PDF；已进入打印机内部缓存、正在出纸的内容可能还需要在打印机上取消。
 
-任务提交结果不确定时，程序不会自动反复提交。出现打印异常时，先检查队列和打印机，再决定是否补打。连接与配置参考[拍照与打印](docs/festival.md)，其中旧示例队列名应替换为自己的实际队列名。
+任务提交结果不确定时，程序不会自动反复提交。出现打印异常时，先检查队列和打印机，再决定是否补打。推荐通过网络连接打印机，并在 CUPS 中安装队列。打印机纸盒需设为实际 A5 纸张及其进纸方向；报纸内容为竖版。纸张横向放入纸盒与 PDF 竖版是两个设置。
 
-### AI 报道
+## AI 报道：本地与云端
 
-在“拍照与 AI 报道”中开启后，程序读取**同次拍摄的原图**生成短报道，加入报纸正文。当前通用看图方案采用本地视觉语言模型；已有 S100 适配可使用 BPU 视觉编码，并由 CPU 完成语言生成。
+在左上角设置面板开启“AI 报道”，选择来源后保存。两种来源均使用**同次拍摄的摄像头原图**，不把动漫图当作识别输入。提示词要求结合可见表情、动作及环境撰写科技节短报道，不猜测身份或遮挡细节。生成模型仍可能认错；失败或内容不可用时使用固定文案。
 
-报道模型和运行时需要单独准备。加载或生成失败时回退固定文案；是否启用都保存原图。开启后等待时间会增加，内容也可能存在识别错误，详见[通用看图报道](docs/general-report.md)。
+| 方式 | 当前实现 | 网络与费用 |
+| --- | --- | --- |
+| 本地模型 | InternVL3-2B-Instruct Q8 看图，Qwen3-0.6B Q8 并行生成活动背景文案；视觉编码使用 BPU，语言解码使用 CPU | 无需向云端上传照片 |
+| DeepSeek 云端 | `deepseek-flash`，将同次原图与报道提示词提交 API，关闭思考模式 | 需要互联网及有效 API key，按服务商计费 |
 
-## 文件保存
+云端模式可在面板中填写、测试或清除 API key。留空保存会保留原有 key。key 单独写入本机 `report-secrets.json`，文件权限为仅当前用户可读写；不存入普通设置、不随代码上传 GitHub。连接测试可能产生少量 API 费用。云端模式会上传照片，请根据现场使用要求选择。
 
-正常拍摄后，每次拍摄建立一个独立文件夹：
+**超时设置**：本地看图请求为 30 秒，云端请求为 10 秒。本地还包含模型启动等待（最多 80 秒）及并行写作请求（12 秒），所以 30 秒不是从拍照到 PDF 的总时限。冷启动、排版和打印排队也会影响总耗时，不保证每次在固定秒数内完成。
 
-```text
-service/captures/日期-时间-标识/
-├── original.jpg      摄像头原始照片
-├── photo.jpg         动漫照片
-├── newspaper.pdf     该次拍摄的纪念报纸
-└── record.json       设置快照、报道结果、天气与打印任务记录
-```
+流程：V 手势 → 3 秒倒计时 → 同次保存原图与动漫图 → 定格预览、暂停动漫推理与手势 → 生成报道 → 排版 PDF → 按设置提交一份打印或只保存 PDF → 恢复预览。等待期间禁止重复拍照；开启打印时显示领取报纸提示。提交任务成功不等于打印机已完成出纸。
 
-以上是**源码目录布局**。已部署设备若将服务文件直接放在 `/home/sunrise/anime-moment/` 下，照片对应保存在 `/home/sunrise/anime-moment/captures/`。
+## 照片、PDF 与设置在哪里
 
-照片、模型、个人设置和生成记录不纳入 Git 版本控制。照片处理与 AI 报道在本机运行；自动地点和天气会请求外部接口，不会随请求上传摄像头照片。
+已部署 S100 的运行目录为 `/home/sunrise/anime-moment`。从仓库直接运行时，对应目录为仓库中的 `service/`。以下路径均相对于运行目录：
+
+| 路径 | 内容 |
+| --- | --- |
+| `captures/<拍摄编号>/original.jpg` | 同次摄像头原图 |
+| `captures/<拍摄编号>/photo.jpg` | 动漫照片 |
+| `captures/<拍摄编号>/newspaper.pdf` | A5 竖版纪念报纸 |
+| `captures/<拍摄编号>/` 内的任务记录 | 生成与打印状态 |
+| `display-settings.json` | 输出分辨率、旋转、镜像 |
+| `festival-settings.json` | 拍照、照片墙、横幅、打印及 AI 来源 |
+| `weather-settings.json`、`weather-cache.json` | 城市天气设置与缓存 |
+| `report-secrets.json` | 云端 API key，仅保存在设备本地 |
+| `gesture-model.json` | 手势模型参数 |
+
+历史照片与报纸已按本次维护要求清空；以后拍摄仍会保存到上述位置。删除拍摄目录会同时删除原图、动漫图、报纸和补打记录。照片墙仅显示现存照片，不影响打印机内部已接收的任务。
 
 ## 安装与启动
 
-### 运行环境
+### 运行环境与模型
 
-- RDK S100，aarch64 Ubuntu 22.04 图形桌面及匹配的 D-Robotics `hbm_runtime`；本项目曾验证 HBRT 4.2.11。
-- USB UVC 摄像头、显示器；需要出纸时连接支持 CUPS 的打印机。
-- Python 3.10、GTK3 / PyGObject、Cairo、V4L2，以及 [Python 依赖](service/requirements.txt)。
-- 动漫处理所需的 HBM 与 ONNX 模型。基础模型清单见 [models-manifest.json](models-manifest.json)，来源及许可见[模型说明](docs/models.md)。
-- 微软雅黑字体需自行合法取得并安装；报纸生成会查找 `service/assets/fonts/msyh.ttc` 和相应粗体字体。
+需要 RDK S100（aarch64 Ubuntu 22.04 图形桌面）、匹配的 D-Robotics `hbm_runtime`、Python 3.10、GTK3/PyGObject、Cairo、USB UVC 摄像头及显示器。出纸需要 CUPS 与已安装的打印机；当前现场使用 HP Color LaserJet Pro M452nw 网络打印。
 
-**仓库不附带模型权重。只克隆代码，不能直接完成动漫推理。** BPU 手势与 AI 报道的模型也需要另外配置。
+仓库仅包含应用源码、运行安装辅助脚本及许可说明，**不附模型、字体、预编译原生程序、凭据或拍摄文件**，克隆代码不能直接完成全部推理。模型需合法取得并适配 S100；基础模型校验清单见 [models-manifest.json](models-manifest.json)。
 
-### 从源码运行
+运行目录需要：
 
-在 S100 的图形桌面终端，以普通桌面用户操作：
+- `models/scene_640.hbm`、`portrait_anime_512.hbm`、`portrait_structure_512.hbm`、`head_parse_512.hbm`、`face_detection_yunet_2023mar.onnx`、`model-config.json`。
+- 手势：`models/hagrid_gesture.hbm` 与 `gesture-model.json`；CPU 回退另需掌心/手部关键点 ONNX 模型，ONNX Runtime 可放在 `local-vlm/gesture-ort/runtime/`。
+- 本地报道：`local-vlm/internvl2b-candidate/` 中的 `language.gguf`、`mmproj.gguf`、`vision.hbm`，以及 `local-vlm/Qwen3-0.6B-Q8_0.gguf`。目录名中的 candidate 是兼容已有部署路径，里面保留的是当前正式使用的权重。
+- `local-vlm/build/bin/llama-server`：当前使用带 S100 embedding 接口的 llama.cpp b11669 原生程序。普通上游二进制不能直接替代此 BPU 接口；适配构建脚本为 `scripts/build_general_report_bridge.py`，需要自行提供匹配源码与编译环境。CPU 路径仍需匹配的多模态运行时。
+- `assets/school-emblem.png` 与合法取得的微软雅黑常规、粗体字体（`assets/fonts/msyh.ttc`、`msyhbd.ttc`）。
+
+### 从源码启动
+
+在 S100 图形桌面终端操作：
 
 ```bash
 git clone https://github.com/myh00001/anime-moment.git
 cd anime-moment
-
-# 导入基础动漫处理模型，详见模型说明
-python3 scripts/import_models.py /path/to/model-files
-
-# 安装依赖并检查环境
 bash scripts/install_dependencies.sh
+python3 scripts/import_models.py /path/to/model-files
 python3 scripts/check_environment.py
-
-# 启动桌面程序
+bash scripts/build_native.sh
+# 按上面的清单另行配置手势、本地报道模型、原生运行时及字体
 python3 service/local_display.py
 ```
 
-依赖安装脚本使用 apt 安装系统包，将项目 Python 依赖安装到 `service/vendor/`。HBRT / `hbm_runtime` 由板卡环境提供。
+安装脚本将项目 Python 依赖放入 `service/vendor/`。HBRT 由板卡系统提供。原生图像运算模块不可用时会回退 Python/NumPy/OpenCV 路径，速度可能降低。FPS 受摄像头模式、人脸数量、温度及后台负载影响，以面板实际输出数值为准。
 
-可选编译原生 CPU 运算模块：
+配置好本地权重和原生程序后，先运行 `python3 scripts/setup_report_service.py` 安装按需启动的写作服务。仅使用云端时可跳过。
 
-```bash
-bash scripts/build_native.sh
-```
+本地 Qwen 写作服务由 `run_report_models.py` 管理；已部署设备的用户服务为 `anime-report-vlm.service`，启动命令应指向实际运行目录中的该文件。InternVL 看图进程由应用按需管理。云端模式不需要本地报道权重。
 
-未编译时使用对应的 Python / NumPy / OpenCV 路径。实际 FPS 受场景、人脸数量、分辨率及同时运行的模型影响，请以面板读数为准；历史测试见[性能说明](docs/performance.md)。
+### 桌面图标与自启动
 
-### 安装桌面图标与自启动
+新安装时运行：
 
 ```bash
 python3 scripts/setup_desktop.py --start
 ```
 
-此命令安装“漫像时刻”桌面图标、用户服务和桌面登录自启动，并立即启动程序。去掉 `--start` 时仅安装。移动项目目录后应重新运行安装脚本。
+会安装桌面图标、登录自启动和用户服务。手动关闭后保持关闭（`Restart=no`），双击桌面图标再次打开。本次清理保留已有自启动和手动关闭行为。
 
-常用维护命令：
+已部署设备常用命令：
 
 ```bash
 systemctl --user status anime-local-display.service
 systemctl --user restart anime-local-display.service
-journalctl --user -u anime-local-display.service -n 80 --no-pager
+systemctl --user status anime-report-vlm.service
+lpstat -p -d
 ```
 
-服务内部名称仍为 `anime-local-display.service`，桌面显示名称为“漫像时刻”。
-
-### 可选模型与设置文件
-
-以下路径相对于 `service/`，已部署设备以服务文件所在目录为准：
-
-| 文件或目录 | 用途 |
-| --- | --- |
-| `models/hagrid_gesture.hbm`、`gesture-model.json` | 可选 BPU 手势模型及输入尺寸、阈值配置 |
-| `local-vlm/` | 可选 AI 报道模型与隔离运行时 |
-| `display-settings.json` | 画面分辨率、旋转、镜像 |
-| `festival-settings.json` | 照片墙、打印、广告栏、AI 报道设置 |
-| `weather-settings.json` | 城市、地点打印范围、天气与温度设置 |
-| `weather-cache.json` | 自动地点与天气缓存 |
-| `captures/` | 拍摄结果及任务记录 |
-
-### 可选网页入口
-
-```bash
-bash service/start.sh
-```
-
-默认监听板卡的 `127.0.0.1:7860`。远程访问可使用 SSH 转发：
-
-```bash
-ssh -L 7860:127.0.0.1:7860 YOUR_USER@YOUR_BOARD_IP
-```
-
-浏览器打开 `http://127.0.0.1:7860/`。此入口使用**浏览器所在设备的摄像头**，与板上 GTK 展示入口不同，不提供完整的现场拍照打印界面；同时运行会共享 BPU 资源。接口没有账户鉴权，请使用回环监听和 SSH 转发。
+当前现场入口为 GTK 桌面应用；旧浏览器原型、性能实验、历史报表和废弃模型工具链已移除。不要同时启动多个相机实例争抢摄像头或 BPU。
 
 ## 常见问题
 
-**手势没有触发？** 先确认手完整进入画面、手指分开且光线充足，放下手后再比 V。面板会显示当前识别后端；模型不可用时仍可用空格或拍照按钮。
-
-**关闭 AI 报道后还保存原图吗？** 保存。原图、动漫图和报纸是正常拍摄流程的输出，不依赖 AI 报道开关。
-
-**为什么摄像头是 1080p / 30 FPS，画面没有 30 FPS？** 摄像头采集、模型处理和屏幕显示的速率不同；面板显示实际输出速率。
-
-**打印机恢复后会不会把旧任务全部打印？** 仍在队列中的任务可能继续打印。补纸、补墨前可先清空队列，再按需补打。
-
-**为什么地点和实际位置不一致？** 自动定位依据网络出口 IP，代理、VPN 或运营商出口会影响结果。需要指定地点时改用手动设置。
+- **V 手势不触发**：让完整手掌进入画面、手指分开，放下手再举起。远距离受手部像素、光线和遮挡限制，不承诺固定五米识别。也可用空格或面板拍照按钮。
+- **PDF 保存但没有出纸**：检查自动打印开关、所选队列和 `lpstat -p -d`；检查打印机纸盒 A5 尺寸、进纸方向、缺纸提示与网络。不要反复补交任务。
+- **每次都要按 OK**：确保打印机纸盒的纸张尺寸、类型和进纸方向与实际 A5 纸一致，并与队列配置匹配。
+- **云端报道失败**：检查网络、模型可用性、key 与额度。10 秒超时会回退固定文案；不要把 key 贴到公开 issue 或截图里。
+- **本地第一次慢**：模型冷加载会额外耗时。AI 阶段暂停动漫推理，以减少资源争抢。
+- **换屏或旋转后比例不合适**：在设置中调整旋转、横幅高度和照片墙数量，预览按摄像头比例适配。
 
 ## 项目结构与许可
 
-```text
-service/                 摄像头采集、推理、桌面界面、拍照打印与天气
-scripts/                 模型导入、依赖安装、环境检查及桌面服务安装
-tests/                   功能与回归测试
-docs/                    模型、报道、天气、打印及性能说明
-licenses/                第三方许可文本
-models-manifest.json     基础运行模型清单与校验信息
-```
+`service/` 是运行源码和界面资源；`scripts/` 是安装、模型导入、原生编译和打印配置辅助工具；`licenses/` 与第三方声明保留许可文本。测试程序、实验版本、日志、历史报表和拍摄产物不随当前版本发布。Git 历史中的旧提交不因当前文件删除而重写。
 
-原创应用与部署代码采用 [MIT](LICENSE)。第三方内容与模型适用各自许可；尤其 AnimeGANv3 上游包含非商业使用限制。详见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)，不能仅凭本仓库 MIT 许可推定模型可商用。
+原创代码采用 [MIT](LICENSE)。模型、字体、学校标识及第三方依赖适用各自条款，详见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。

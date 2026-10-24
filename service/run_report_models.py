@@ -1,4 +1,4 @@
-"""Supervise small image-observation and Chinese-writing models as one service."""
+"""Supervise the current local Chinese report writer."""
 from pathlib import Path
 import signal
 import subprocess
@@ -9,13 +9,8 @@ def main():
     common=[str(binary),'--host','127.0.0.1','--ctx-size','2048','--threads','2',
             '--threads-batch','2','--parallel','1','--batch-size','128','--ubatch-size','128',
             '--n-gpu-layers','0','--jinja','--no-webui','--sleep-idle-seconds','300']
-    commands=[common+['--model',str(root/'SmolVLM2-256M-Video-Instruct-Q8_0.gguf'),
-        '--mmproj',str(root/'mmproj-SmolVLM2-256M-Video-Instruct-Q8_0.gguf'),
-        '--alias','local-caption-vlm','--port','8087','--image-max-tokens','64'],
-        common+['--model',str(root/'Qwen3-0.6B-Q8_0.gguf'),
+    commands=[common+['--model',str(root/'Qwen3-0.6B-Q8_0.gguf'),
         '--alias','local-report-writer','--port','8088']]
-    from report_bpu_caption import available
-    if available():commands=commands[1:]  # BPU replaces the CPU image encoder.
     stopping=threading.Event();children=[]
     for sig in (signal.SIGTERM,signal.SIGINT):signal.signal(sig,lambda *_:stopping.set())
     try:

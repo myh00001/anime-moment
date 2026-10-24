@@ -1,0 +1,14 @@
+{
+  "input_size": 640,
+  "threshold": 0.5,
+  "confirmation_seconds": 0.1,
+  "source": "https://github.com/hukenovs/hagrid",
+  "model": "HaGRID YOLOv10n direct gesture detection",
+  "precision": "INT8 backbone with INT16 final detection heads",
+  "sha256": "17cf8e9aa9599ca92cfacf5ce2c29f3d8d073c71cf5276d4bacd2f6d79d23641",
+  "classes": 34,
+  "peace_classes": [
+    21,
+    22
+  ]
+}

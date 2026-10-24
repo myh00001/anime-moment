@@ -19,7 +19,7 @@ def main():
     launcher.write_text('#!/bin/sh\nsystemctl --user import-environment DISPLAY WAYLAND_DISPLAY XAUTHORITY DBUS_SESSION_BUS_ADDRESS\nexec systemctl --user start anime-local-display.service\n',encoding='utf-8')
     launcher.chmod(0o755)
     unit = f'''[Unit]
-Description=S100 USB anime camera fullscreen player
+Description=漫像时刻
 After=graphical-session.target
 PartOf=graphical-session.target
 [Service]
@@ -35,8 +35,8 @@ WantedBy=graphical-session.target
     (units/'anime-local-display.service').write_text(unit,encoding='utf-8')
     entry = f'''[Desktop Entry]
 Type=Application
-Name=实时动漫相机
-Name[en]=Anime Camera
+Name=漫像时刻
+Name[en]=漫像时刻
 Exec={quoted(launcher)}
 Icon=camera-video
 Terminal=false

@@ -5,6 +5,9 @@ gi.require_version('Pango','1.0');gi.require_version('PangoCairo','1.0');gi.requ
 from gi.repository import Pango,PangoCairo,Gdk
 
 MESSAGES=(
+    ('地瓜机器人，让创意动起来','RDK S100，让动漫创作来到你面前'),
+    ('小小地瓜，装下大大创意','从镜头到报纸，见证端侧 AI 的魅力'),
+    ('创意有舞台，地瓜来助力','用 RDK S100，把奇思妙想做成作品'),
     ('比出 ✌，3 秒后自动拍照','看见倒计时后，可以放下手势'),
     ('让此刻，成为动漫主角','看向上方镜头，留下你的科技节瞬间'),
     ('把科技节的快乐带回家','拍照后自动生成专属纪念报纸'),
@@ -20,7 +23,9 @@ def draw_banner(c,width,height,emblem=None,remaining=None,now=0):
         layout=PangoCairo.create_layout(c);font=Pango.FontDescription('Microsoft YaHei')
         font.set_absolute_size(size*scale*Pango.SCALE)
         if bold:font.set_weight(Pango.Weight.BOLD)
-        layout.set_font_description(font);layout.set_text(value,-1)
+        layout.set_font_description(font)
+        if '<span' in value:layout.set_markup(value,-1)
+        else:layout.set_text(value,-1)
         w,h=layout.get_pixel_size()
         if max_width is not None and w>max_width:
             font.set_absolute_size(size*scale*Pango.SCALE*max_width/w)
@@ -32,7 +37,7 @@ def draw_banner(c,width,height,emblem=None,remaining=None,now=0):
             c.set_line_join(1);c.stroke_preserve();c.fill();c.restore()
         else:PangoCairo.show_layout(c,layout)
         return w
-    logo=min(height*.70,110*scale);margin=28*scale
+    logo=min(height*.90,130*scale);margin=28*scale
     if emblem:
         ratio=min(logo/emblem.get_width(),logo/emblem.get_height())
         c.save();c.translate(margin,(height-logo)/2);c.scale(ratio,ratio)
@@ -60,8 +65,15 @@ def draw_banner(c,width,height,emblem=None,remaining=None,now=0):
         school_width=label('北京市第六十五中学 · 2026年校园科技节',x,height*.23,21,True,color=(.68,.86,.82))
         theme_width=label('做中学科学  实践促创新',x,height*.53,37,True)
         name_width=label('漫像时刻 — AI 动漫拍报机',x,height*.81,20)
-        right_width=max(1,width-margin-x-max(school_width,theme_width,name_width)-32*scale)
-        index=int(now/6)%len(MESSAGES);headline,detail=MESSAGES[index]
+        instructions_left=x+max(school_width,theme_width,name_width)+24*scale
+        available=max(1,width-margin-instructions_left)
+        guide_width=available*.68;right_width=max(1,available-guide_width-24*scale)
+        guide_x=instructions_left+guide_width/2
+        c.save();c.translate(guide_x+3*scale*math.sin(now*2.8),height*.52+2*scale*math.sin(now*3.2))
+        c.rotate(.025*math.sin(now*2.8))
+        label('比 <span foreground="#FFD166">✌</span>，3 秒拍照',0,0,68,True,'center',(.96,1,.98),max_width=max(1,guide_width-12*scale))
+        c.restore()
+        index=int(now/3)%len(MESSAGES);headline,detail=MESSAGES[index]
         label(headline,width-margin,height*.36,46,True,'right',(.64,.93,.85),max_width=right_width)
         label(detail,width-margin,height*.69,28,False,'right',(.78,.84,.85),max_width=right_width)
         for i in range(len(MESSAGES)):

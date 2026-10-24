@@ -20,13 +20,13 @@ class Player:
   self.inference_idle=threading.Event();self.lock=threading.Lock();self.latest=None;self.sequence=0;self.result=None;self.message='等待 USB 摄像头接入…';self.running=True;self.capture_info={};self.painted=None;self.paint_size=None;self.heartbeat=0
   self.settings=load_settings(ROOT/'display-settings.json')
   self.festival_settings=load_options(ROOT/'festival-settings.json')
-  self.window=Gtk.Window(title='S100 实时动漫相机');self.window.set_default_size(1280,720)
+  self.window=Gtk.Window(title='漫像时刻');self.window.set_default_size(1280,720)
   self.window.connect('destroy',self.close);self.window.connect('key-press-event',self.key)
   self.window.connect('window-state-event',self.window_state)
   self.frame_times=deque(maxlen=120);self.resources={};self.panel_visible=False;self.cursor_hidden=False;self.frame_status={}
   self.window.add_events(Gdk.EventMask.POINTER_MOTION_MASK)
   self.window.connect('motion-notify-event',self.pointer_motion)
-  css=Gtk.CssProvider();css.load_from_data(b'window {background: black;} label {color: white; font-size: 28px;}')
+  css=Gtk.CssProvider();css.load_from_data(b'* {font-family: "Microsoft YaHei";} window {background: black;} label {color: white; font-size: 28px;}')
   Gtk.StyleContext.add_provider_for_screen(Gdk.Screen.get_default(),css,Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
   self.box=Gtk.Box(orientation=Gtk.Orientation.VERTICAL);self.image=Gtk.DrawingArea();self.image.set_size_request(1,1);self.image.connect('draw',self.draw_frame);self.pixbuf=None;self.label=Gtk.Label(label=self.message)
   self.festival=None;self.countdown='';self.gallery_paths=[];self.gallery_cache={};self.wall_size=None;self.wall_pending=False
@@ -51,7 +51,11 @@ class Player:
   self.panel.get_style_context().add_provider(panel_css,Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);self.info.get_style_context().add_provider(panel_css,Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
   self.panel_content.get_style_context().add_provider(panel_css,Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
   Gtk.StyleContext.add_provider_for_screen(Gdk.Screen.get_default(),panel_css,Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+  from settings_panel import organize_settings
+  organize_settings(self)
   self.panel.show_all();self.panel.hide();self.panel.set_no_show_all(True);self.overlay.add_overlay(self.panel);self.overlay.set_overlay_pass_through(self.panel,False);self.window.add(self.overlay)
+  from photo_preview import connect_gallery
+  connect_gallery(self)
   self.window.show_all()
   if start_workers:
    from festival import Festival
@@ -65,8 +69,10 @@ class Player:
    threading.Thread(target=self.monitor_resources,daemon=True).start();GLib.timeout_add(500,self.refresh_info)
  def pointer_motion(self,window,event):
   _,x,y,_=self.window.get_window().get_device_position(event.get_device())
-  state=corner_action(x,y,self.window.get_allocated_width(),self.window.get_allocated_height(),self.panel_visible,max(480,self.panel.get_allocated_width()+36),max(300,self.panel.get_allocated_height()+36))
-  self.panel_visible=state['show_panel'];self.panel.set_visible(self.panel_visible)
+  # Keep the whole left settings column active, including a short window's
+  # scrollable lower controls; child allocations can be clipped during resize.
+  state=corner_action(x,y,self.window.get_allocated_width(),self.window.get_allocated_height(),self.panel_visible,max(480,self.panel.get_allocated_width()+36),max(self.window.get_allocated_height(),self.panel.get_allocated_height()+36))
+  self.panel_visible=state['show_panel'] or getattr(self,'panel_pinned',False);self.panel.set_visible(self.panel_visible)
   if state['hide_cursor']!=self.cursor_hidden:
    self.cursor_hidden=state['hide_cursor'];self.window.get_window().set_cursor(Gdk.Cursor.new_for_display(self.window.get_display(),Gdk.CursorType.BLANK_CURSOR) if self.cursor_hidden else None)
  def close(self,*_):
@@ -167,35 +173,37 @@ class Player:
   self.settings_expander=Gtk.Expander(label='画面设置');self.settings_expander.set_margin_start(18);self.settings_expander.set_margin_end(18);self.settings_expander.set_margin_bottom(14)
   grid=Gtk.Grid(column_spacing=10,row_spacing=10);grid.set_margin_top(12);self.settings_expander.add(grid);self.panel_content.pack_start(self.settings_expander,False,False,0)
   self.presets=[640,960,1280,1920]
-  self.preset=Gtk.ComboBoxText();self.preset.append_text('自定义')
-  for edge in self.presets:self.preset.append_text(f'长边 {edge} 像素')
+  self.preset=Gtk.ComboBoxText()
   grid.attach(Gtk.Label(label='输出分辨率',xalign=0),0,0,1,1);grid.attach(self.preset,1,0,3,1)
-  self.output_width=Gtk.SpinButton.new_with_range(320,1920,4);self.output_width.set_numeric(True);self.output_width.set_digits(0)
-  grid.attach(Gtk.Label(label='输出长边',xalign=0),0,1,1,1);grid.attach(self.output_width,1,1,1,1);grid.attach(Gtk.Label(label='宽高自动匹配'),2,1,2,1)
   self.rotation=Gtk.ComboBoxText()
   for angle in (0,90,180,270):self.rotation.append_text(f'{angle}°' + (' 顺时针' if angle else ''))
   grid.attach(Gtk.Label(label='摄像头旋转',xalign=0),0,2,1,1);grid.attach(self.rotation,1,2,3,1)
   self.mirror=Gtk.CheckButton(label='镜像显示');grid.attach(self.mirror,0,3,4,1)
   buttons=Gtk.Box(spacing=10);apply=Gtk.Button(label='应用并保存');apply.connect('clicked',self.apply_settings);reset=Gtk.Button(label='恢复默认');reset.connect('clicked',self.reset_settings);buttons.pack_start(apply,True,True,0);buttons.pack_start(reset,True,True,0);grid.attach(buttons,0,4,4,1)
   self.settings_note=Gtk.Label(label='分辨率只改变像素密度，取景比例保持不变。',xalign=0);self.settings_note.set_line_wrap(True);grid.attach(self.settings_note,0,5,4,1)
-  self.preset.connect('changed',self.select_preset);self.sync_settings_controls()
+  self.rotation.connect('changed',lambda *_:self.refresh_resolution_options());self.sync_settings_controls()
   self.settings_expander.connect('notify::expanded',lambda *_:GLib.idle_add(self.resize_panel))
  def resize_panel(self):
-  limit=max(160,self.window.get_allocated_height()-36)
+  limit=max(120,self.window.get_allocated_height()-36)
+  self.panel_scroll.set_size_request(max(180,min(520,self.window.get_allocated_width()-36)),-1)
   if self.panel_scroll.get_min_content_height()>limit:self.panel_scroll.set_min_content_height(0)
   self.panel_scroll.set_max_content_height(limit)
   wanted=min(limit,max(40,self.panel_content.get_preferred_height()[1]))
   if self.panel_scroll.get_min_content_height()!=wanted:self.panel_scroll.set_min_content_height(wanted)
   return False
- def select_preset(self,combo):
-  index=combo.get_active()-1
-  if 0<=index<len(self.presets):
-   self.output_width.set_value(self.presets[index])
+ def refresh_resolution_options(self,edge=None):
+  selected=edge or int(self.preset.get_active_id() or max(self.settings['width'],self.settings['height']))
+  width=int(self.capture_info.get('width') or 1920);height=int(self.capture_info.get('height') or 1080)
+  if self.rotation.get_active() in (1,3):width,height=height,width
+  self.preset.remove_all()
+  for size in sorted(set(self.presets+[selected])):
+   w,h=output_dimensions(width,height,size);self.preset.append(str(size),f'{w} × {h}')
+  self.preset.set_active_id(str(selected))
  def sync_settings_controls(self):
-  value=self.settings;edge=max(value['width'],value['height']);self.preset.set_active(self.presets.index(edge)+1 if edge in self.presets else 0)
-  self.output_width.set_value(edge);self.rotation.set_active(value['rotation']//90);self.mirror.set_active(value['mirror'])
+  value=self.settings;self.rotation.set_active(value['rotation']//90);self.mirror.set_active(value['mirror'])
+  self.refresh_resolution_options(max(value['width'],value['height']))
  def apply_settings(self,*_):
-  rotation=self.rotation.get_active()*90;edge=int(round(self.output_width.get_value()/4)*4)
+  rotation=self.rotation.get_active()*90;edge=int(self.preset.get_active_id() or 1920)
   width=int(self.capture_info.get('width') or 1920);height=int(self.capture_info.get('height') or 1080)
   if rotation in (90,270):width,height=height,width
   width,height=output_dimensions(width,height,edge)
@@ -215,6 +223,7 @@ class Player:
   r=self.resources;s=self.frame_status;out=s.get('output',[]);fps=s.get('fps',0)
   lines=['实时信息 · S100 BPU',f'输出  {out[0]} × {out[1]}   |   {fps:.1f} FPS' if out else '输出  等待画面',f"采集  {int(self.capture_info.get('width',0))} × {int(self.capture_info.get('height',0))}",f"CPU  {r['cpu_percent']:.1f}%" if 'cpu_percent' in r else 'CPU  采样中']
   lines.insert(2,f'显示  {self.image.get_allocated_width()} × {self.image.get_allocated_height()} · 铺满裁剪')
+  if self.festival:lines.append('手势识别  '+getattr(self.festival,'gesture_backend','初始化中'))
   lines.append('BPU  '+' / '.join(f"{v:.0f}% · 近5秒均值 {r.get('bpu_average_percent',{}).get(k,v):.0f}%" for k,v in r.get('bpu_percent',{}).items()) if r.get('bpu_percent') else 'BPU  暂无读数')
   if 'bpu_frequency_mhz' in r:lines.append(f"BPU 频率  {r['bpu_frequency_mhz']:.0f} MHz")
   if 'processing_ms' in s:lines.append(f"模型与后处理  {s['processing_ms']:.0f} ms")
@@ -247,17 +256,23 @@ class Player:
    draw_capture_hud(context,width,height,remaining=max(0,deadline-now) if deadline else None,shot_age=now-shot if shot else None,waiting=bool(self.countdown) and deadline is None,pickup_age=now-pickup if pickup else None,ai_age=now-self.festival.ai_busy_at if getattr(self.festival,'ai_busy_at',0) else None,report_stage=getattr(self.festival,'report_stage',''))
   return False
  def draw_panel(self,widget,context):
-  context.save();context.set_source_rgba(0,0,0,0.45)
-  context.rectangle(0,0,widget.get_allocated_width(),widget.get_allocated_height());context.fill();context.restore()
+  # The settings container CSS paints the single rounded translucent background.
   return False
  def draw_info(self,widget,context):
-  font=Pango.FontDescription('Sans');font.set_absolute_size(19*Pango.SCALE)
+  font=Pango.FontDescription('Microsoft YaHei');font.set_absolute_size(19*Pango.SCALE)
   line_layout=PangoCairo.create_layout(context);line_layout.set_font_description(font)
   context.set_source_rgb(1,1,1)
   for row,line in enumerate(self.info_text.splitlines()):
    context.move_to(18,12+row*27);line_layout.set_text(line,-1);PangoCairo.show_layout(context,line_layout)
   return False
+ def center_window(self):
+  monitor=self.window.get_display().get_monitor_at_window(self.window.get_window())
+  area=monitor.get_workarea();width=min(1000,max(320,int(area.width*.85)));height=min(720,max(240,int(area.height*.85)))
+  self.window.resize(width,height);self.window.move(area.x+(area.width-width)//2,area.y+(area.height-height)//2)
+  return False
  def window_state(self,window,event):
+  if event.changed_mask&Gdk.WindowState.FULLSCREEN and not event.new_window_state&Gdk.WindowState.FULLSCREEN:
+   GLib.timeout_add(120,self.center_window)
   # The title-bar maximize button should return to kiosk fullscreen too.
   if event.new_window_state&Gdk.WindowState.MAXIMIZED and not event.new_window_state&Gdk.WindowState.FULLSCREEN:
    GLib.idle_add(self.restore_fullscreen)
@@ -319,8 +334,8 @@ class Player:
       (ROOT/'local-display-status.json').write_text(json.dumps(status,indent=2));print('DISPLAY',json.dumps(status),flush=True)
    except Exception as e:self.message='正在恢复推理进程…';print('INFERENCE',str(e),flush=True);time.sleep(1)
  def paint(self):
-  slide=int(time.monotonic()/6)
-  if getattr(self,'banner_slide',None)!=slide:self.banner_slide=slide;self.banner.queue_draw()
+  slide=int(time.monotonic()/3)
+  if time.monotonic()-getattr(self,'banner_animation_at',0)>=.08:self.banner_animation_at=time.monotonic();self.banner.queue_draw()
   if self.festival:
    countdown=self.festival.tick()
    if countdown!=self.countdown:self.countdown=countdown;self.image.queue_draw();self.banner.queue_draw()

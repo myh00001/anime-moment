@@ -5,7 +5,7 @@ from zoneinfo import ZoneInfo
 import json, math, os, queue, subprocess, threading, time, uuid
 import numpy as np
 from festival_settings import DEFAULT_OPTIONS, normalize_options
-from festival_weather import WeatherCache,weather_label
+from festival_weather import WeatherCache,weather_label,weather_valid
 from weather_icon import draw_weather_icon
 from local_report import make_report
 from report_router import generate_report
@@ -52,16 +52,19 @@ def pose_victory(pose):
 
 class GestureLatch:
     def __init__(self):
-        self.armed=True; self.absent=None
+        self.armed=True;self.absent=None;self.present_since=None
     def update(self, detected, now):
         if detected:
             self.absent=None
-            if self.armed:
+            if self.present_since is None:self.present_since=now
+            if self.armed and now-self.present_since >= .1-1e-9:
                 self.armed=False;return True
         else:
+            self.present_since=None
             if self.absent is None:self.absent=now
             if now-self.absent >= 1:self.armed=True
         return False
+
 
 def newspaper(photo, target, captured=None, weather=None,report=None):
     from reportlab.pdfgen import canvas
@@ -108,13 +111,15 @@ def newspaper(photo, target, captured=None, weather=None,report=None):
     rule(177,1)
     when=captured or datetime.now(ZoneInfo('Asia/Shanghai'))
     text(8,172,when.strftime('%Y.%m.%d  %H:%M:%S'),10)
-    available=weather_label(weather,when)!='北京 天气暂不可用'
+    available=weather_valid(weather,when)
+    city=(weather or {}).get('city','定位中')
     temperature=f"{float(weather['temperature']):.0f}°C" if available else '暂无'
     temp_width=pdfmetrics.stringWidth(temperature,'FestivalChinese',10)/mm
-    city_width=pdfmetrics.stringWidth('北京','FestivalChinese',10)/mm
+    city_font=min(10,55*mm/max(1,pdfmetrics.stringWidth(city,'FestivalChinese',1)))
+    city_width=pdfmetrics.stringWidth(city,'FestivalChinese',city_font)/mm
     icon_size=3.6;gap=1.4
     group_left=140-temp_width-icon_size-city_width-2*gap
-    text(group_left,172,'北京',10)
+    text(group_left,172,city,city_font)
     draw_weather_icon(c,(group_left+city_width+gap)*mm,171.7*mm,icon_size*mm,int(weather['code']) if available else None)
     text(140,172,temperature,10,align='right')
     c.setFillColorRGB(.55,.55,.55);c.rect(8*mm,153.5*mm,132*mm,13*mm,fill=1,stroke=0);c.setFillColorRGB(1,1,1)
@@ -183,12 +188,13 @@ class Festival:
         with self.lock:
             if self.min_sequence is None or sequence<self.min_sequence:return
             self.min_sequence=None
+            captured_at=datetime.now(ZoneInfo('Asia/Shanghai'))
             options=dict(getattr(self,'configuration',lambda:DEFAULT_OPTIONS)())
             original=original_bgr.copy() if original_bgr is not None else None
             try:
                 if options.get('ai_report',False):
                     self.ai_busy_at=time.monotonic();self.report_stage='云端 AI 正在生成报道' if options.get('report_provider')=='deepseek' else 'AI 正在生成报道';self.pickup_at=0
-                self.jobs.put_nowait((rgb.copy(),options,original));self.shutter_at=time.monotonic();self.status='正在生成报纸…'
+                self.jobs.put_nowait((rgb.copy(),options,original,captured_at));self.shutter_at=time.monotonic();self.status='正在生成报纸…'
             except queue.Full:
                 self.ai_busy_at=0;self.report_stage='';self.status='打印任务繁忙，请稍后再拍'
     def yolo_gesture_loop(self,detector):
@@ -286,7 +292,7 @@ class Festival:
     def save_loop(self):
         from PIL import Image
         while self.running() or not self.jobs.empty():
-            try:rgb,options,original_bgr=self.jobs.get(timeout=.5)
+            try:rgb,options,original_bgr,captured_at=self.jobs.get(timeout=.5)
             except queue.Empty:
                 if hasattr(self,'last_job') and self.configuration()['print_enabled']:
                     try:
@@ -295,8 +301,8 @@ class Festival:
                         elif 'idle' in p.stdout:self.status='打印队列就绪 · 比 ✌ 再拍一张'
                     except (OSError,subprocess.TimeoutExpired):pass
                 continue
-            folder=self.directory/(datetime.now(ZoneInfo('Asia/Shanghai')).strftime('%Y%m%d-%H%M%S')+'-'+uuid.uuid4().hex[:6])
-            record={'state':'saving','options':options}
+            folder=self.directory/(captured_at.strftime('%Y%m%d-%H%M%S')+'-'+uuid.uuid4().hex[:6])
+            record={'state':'saving','options':options,'captured_at':captured_at.isoformat()}
             def journal():
                 temp=folder/'record.tmp';temp.write_text(json.dumps(record,ensure_ascii=False),encoding='utf-8');temp.replace(folder/'record.json')
             try:
@@ -316,7 +322,7 @@ class Festival:
                 report=generate_report(original,options,ROOT,local=make_report) if inference_ready else {'enabled':True,'state':'fallback','reason':'InferenceNotIdle'}
                 record['ai_report']=report;journal()
                 if options.get('ai_report',False):self.report_stage='正在排版纪念报纸'
-                pdf=folder/'newspaper.pdf';weather=self.weather.snapshot() if hasattr(self,'weather') else None;newspaper(photo,pdf,weather=weather,report=report.get('text'))
+                pdf=folder/'newspaper.pdf';weather=self.weather.snapshot() if hasattr(self,'weather') else None;newspaper(photo,pdf,captured=captured_at,weather=weather,report=report.get('text'))
                 record['weather']=weather
                 record['state']='submitting' if options['print_enabled'] else 'generating_pdf';journal()
                 if options.get('ai_report',False):self.report_stage='正在提交打印' if options['print_enabled'] else '正在保存报纸 PDF'

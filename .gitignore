@@ -37,6 +37,9 @@ local-vlm/
 *.tar.gz
 *.so
 
+service/weather-settings.json
+service/weather-settings.json.tmp
+
 service/report-secrets.json
 service/.report-secrets-*.tmp
 report-secrets.json

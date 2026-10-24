@@ -23,7 +23,7 @@ OBSERVATION = '用一句简短中文描述照片里最明显的可见事实。�
 
 
 class VisionRuntime:
-    def __init__(self, root=None, binary=None, threads=6, bpu=False, ffn_config=None):
+    def __init__(self, root=None, binary=None, threads=6, bpu=False):
         self.root = Path(root or Path(__file__).resolve().parent)
         prepared=self.root/'local-vlm/build-general-report'
         default=(prepared/'bin/llama-server' if (prepared/'.bridge-ready').is_file()
@@ -33,18 +33,6 @@ class VisionRuntime:
         if self.model_size not in ('1B','2B'):raise ValueError('Unsupported general VLM size')
         self.bpu=bpu and self.model_size=='2B'
         self.model_name='InternVL3-'+self.model_size+'-Instruct-Q8_0'
-        self.cpu_binary=self.binary
-        self.ffn=None
-        if self.model_size=='2B' and bpu:
-            from report_ffn import load_config,Sidecar
-            try:
-                config=ffn_config
-                if config is None and binary is None and not os.environ.get('FESTIVAL_GENERAL_VLM_BINARY'):
-                    config=load_config(self.root)
-                if config is not None:
-                    self.ffn=Sidecar(self.root,config);self.binary=config['binary']
-            except (OSError,ValueError,KeyError,TypeError):
-                self.ffn=None
         self.worker = None
         self.result_fd = None
         self.result_buffer = b''
@@ -70,7 +58,6 @@ class VisionRuntime:
             self.folder = tempfile.TemporaryDirectory(prefix='general-vlm-')
             self.log = (Path(self.folder.name)/'runtime.log').open('w+')
             embedding=Path(self.folder.name)/'embedding.bin'
-            self.embedding=embedding
             with socket.socket() as sock:
                 sock.bind(('127.0.0.1',0)); port = sock.getsockname()[1]
             self.endpoint = f'http://127.0.0.1:{port}'
@@ -89,7 +76,6 @@ class VisionRuntime:
             env.update(OMP_NUM_THREADS=str(self.threads),OMP_DYNAMIC='FALSE')
             if self.bpu:env['S100_VLM_EMBED_FILE']=str(embedding)
             try:
-                if self.ffn is not None:self.ffn.environment(env)
                 self.process = subprocess.Popen(command,stdout=self.log,stderr=subprocess.STDOUT,env=env)
                 deadline = started+80
                 while time.monotonic()<deadline:
@@ -114,32 +100,25 @@ class VisionRuntime:
             started=time.monotonic()
             self.warm()
             ready=time.monotonic()
-            if self.ffn is not None:self.ffn.start()
-            ffn_since=self.ffn.counter() if self.ffn is not None else 0
             with Image.open(photo) as source:
                 image=source.convert('RGB')
                 if self.bpu:image=image.resize((448,448),Image.Resampling.BICUBIC)
                 else:image.thumbnail((448,448),Image.Resampling.LANCZOS)
                 buffer=io.BytesIO(); image.save(buffer,format='JPEG',quality=92)
             encoder_seconds=0
-            encoder_pre_ffn_release_seconds=0
             self.encoder_load_seconds=0
             if self.bpu:
                 try:
+                    self.warm_encoder()
                     self.sequence+=1
-                    if self.ffn is not None:
-                        event=self.ffn.encode(photo,self.embedding,self.sequence)
-                        self.encoder_load_seconds=event['load_seconds']
-                    else:
-                        self.warm_encoder()
-                        self.worker.stdin.write((json.dumps({'photo':str(photo),'sequence':self.sequence})+'\n').encode())
-                        self.worker.stdin.flush()
-                        event=self.read_event(5)
-                        self.worker.stdin.close()
-                        self.worker.stdin=None
+                    self.worker.stdin.write((json.dumps({'photo':str(photo),'sequence':self.sequence})+'\n').encode())
+                    self.worker.stdin.flush()
+                    event=self.read_event(5)
                     if event.get('sequence')!=self.sequence or event.get('state')!='encoded':
                         raise RuntimeError('Image embedding sequence mismatch')
                     encoder_seconds=event['seconds']
+                    self.worker.stdin.close()
+                    self.worker.stdin=None
                 except Exception:
                     self.close()
                     raise
@@ -152,15 +131,13 @@ class VisionRuntime:
             request=urllib.request.Request(self.endpoint+'/v1/chat/completions',data=json.dumps(payload).encode(),
                                            headers={'Content-Type':'application/json'})
             http_started=time.monotonic()
-            ffn_profile=None
             try:
                 with self.opener.open(request,timeout=30) as response:
                     data=json.load(response)
-                http_seconds=time.monotonic()-http_started
-                if self.ffn is not None:ffn_profile=self.ffn.finish(ffn_since)
             except Exception:
                 self.close()
                 raise
+            http_seconds=time.monotonic()-http_started
             cleanup_started=time.monotonic()
             if self.bpu:self.close_encoder()
             cleanup_seconds=time.monotonic()-cleanup_started
@@ -168,10 +145,9 @@ class VisionRuntime:
             return {'text':text,'observation':text,'seconds':round(time.monotonic()-started,3),
                     'inference_seconds':round(time.monotonic()-ready,3),
                     'startup_seconds':round(self.startup_seconds,3),
-                    'encoder_pre_ffn_release_seconds':encoder_pre_ffn_release_seconds,
                     'encoder_load_seconds':getattr(self,'encoder_load_seconds',0),'encoder_cleanup_seconds':round(cleanup_seconds,3),'http_seconds':round(http_seconds,3),'encoder_seconds':encoder_seconds,'feature_sha':event['feature_sha'] if self.bpu else None,
-                    'timings':data.get('timings',{}),'model':self.model_name,'ffn_profile':ffn_profile,
-                    'backend':('InternVL3 general VLM: BPU vision + BPU FFN prefill / CPU decode + Qwen3 writing' if self.bpu and ffn_profile else 'InternVL3 general VLM: BPU vision + Qwen3 writing' if self.bpu
+                    'timings':data.get('timings',{}),'model':self.model_name,
+                    'backend':('InternVL3 general VLM: BPU vision + Qwen3 writing' if self.bpu
                                else 'InternVL3 general VLM: CPU vision + Qwen3 writing')}
 
     def warm_encoder(self):
@@ -230,7 +206,6 @@ class VisionRuntime:
                 try: self.process.wait(timeout=3)
                 except subprocess.TimeoutExpired: self.process.kill(); self.process.wait()
             self.process=None
-            if self.ffn is not None:self.ffn.close()
             self.close_encoder()
             if self.log is not None: self.log.close(); self.log=None
             if self.folder is not None: self.folder.cleanup(); self.folder=None
@@ -260,15 +235,8 @@ def warm():
 
 def generate(photo):
     engine=runtime()
-    used_ffn=engine.ffn is not None
     try:return engine.generate(photo)
     except Exception as error:
-        if engine.shutdown_requested.is_set():raise
-        if used_ffn:
-            engine.close();engine.ffn=None;engine.binary=engine.cpu_binary
-            result=engine.generate(photo)
-            result['acceleration_fallback']='FFN-'+type(error).__name__
-            return result
         if not engine.bpu:raise
         engine.close();engine.bpu=False
         result=engine.generate(photo)
