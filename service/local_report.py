@@ -271,7 +271,8 @@ class GeneralVLMReporter:
             result=generate(photo)
             context,self.writer_seconds=future.result()
         self.acceleration_fallback=result.get('acceleration_fallback')
-        self.vision_profile={k:result.get(k) for k in ['startup_seconds','inference_seconds','encoder_load_seconds','encoder_seconds','encoder_cleanup_seconds','http_seconds']}
+        self.ffn_profile=result.get('ffn_profile')
+        self.vision_profile={k:result.get(k) for k in ['startup_seconds','inference_seconds','encoder_load_seconds','encoder_seconds','encoder_pre_ffn_release_seconds','encoder_cleanup_seconds','http_seconds']}
         self.backend=result['backend'];self.vision_model=result['model']
         self.vision_decoder='generative multimodal decoder'
         self.vision_seconds=result['seconds'];self.last_caption=result['text']
@@ -296,6 +297,7 @@ def make_report(photo,enabled,reporter=None):
         if isinstance(getattr(engine,'writer_seconds',None),(int,float)):result['writer_seconds']=engine.writer_seconds
         if isinstance(getattr(engine,'writing_mode',None),str):result['writing_mode']=engine.writing_mode
         if isinstance(getattr(engine,'acceleration_fallback',None),str):result['acceleration_fallback']=engine.acceleration_fallback
+        if isinstance(getattr(engine,'ffn_profile',None),dict):result['ffn_profile']=engine.ffn_profile
         return result
     except Exception as error:
         return {'enabled':True,'state':'fallback','reason':type(error).__name__,
