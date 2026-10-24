@@ -1,0 +1,28 @@
+{
+  "date": "2026-10-24",
+  "duration_seconds": 3912.477297067642,
+  "samples": 778,
+  "stop_reason": "deadline",
+  "scene": "No detected faces during this live soak; not a face FPS measurement.",
+  "output_sizes": [
+    [
+      1920,
+      1080
+    ]
+  ],
+  "fps_mean": 8.32344983599172,
+  "fps_min": 7.3927140298299046,
+  "fps_max": 8.699806953580048,
+  "steady_fps_mean": 8.337877273583661,
+  "latency_mean_ms": 229.18774348276665,
+  "bpu_mean_percent": 27.46286472148541,
+  "temperature_max_c": 49.052,
+  "frames_advanced": 32460,
+  "max_status_age_seconds": 1.367617130279541,
+  "recent_error_count": 0,
+  "fresh_output": true,
+  "fullscreen": true,
+  "restart_policy_no": true,
+  "restarts_zero": true,
+  "models_style_resolution_unchanged": true
+}
