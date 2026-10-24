@@ -38,6 +38,16 @@ def list_printers():
         return sorted(set(re.findall(r'^printer\s+(\S+)', result.stdout, re.M)))
     except (OSError, subprocess.TimeoutExpired): return []
 
+def photo_aspect(info):
+    """GdkPixbuf reports unknown/incomplete files with nonpositive dimensions."""
+    try:
+        if info[0] is None or info[1] <= 0 or info[2] <= 0:
+            return None
+        return info[1] / info[2]
+    except (IndexError, TypeError, ZeroDivisionError):
+        return None
+
+
 def wall_geometry(width, height, requested=0, aspect=16/9):
     """All rows fit; width follows row count, while leaving room for live video."""
     width, height = max(1, int(width)), max(1, int(height))

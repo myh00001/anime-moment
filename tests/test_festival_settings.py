@@ -1,11 +1,17 @@
 import sys,tempfile,unittest
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'service'))
-from festival_settings import DEFAULT_OPTIONS,load_options,save_options,wall_geometry,banner_geometry
+from festival_settings import DEFAULT_OPTIONS,load_options,save_options,wall_geometry,banner_geometry,photo_aspect
 from festival import dispatch_output,submit_print
 from festival import Festival
 
 class PhotoWallSettingsTests(unittest.TestCase):
+ def test_invalid_photo_metadata_cannot_collapse_wall(self):
+  for info in [None,(None,-1,-1),(object(),0,1080),(object(),1920,0)]:
+   self.assertIsNone(photo_aspect(info))
+  aspect=photo_aspect((object(),1920,1080))
+  self.assertAlmostEqual(aspect,16/9)
+  self.assertGreater(wall_geometry(1920,960,8,aspect)['width'],150)
  def test_banner_layout_is_bounded_and_preserves_preview_space(self):
   for width,height in [(1920,1080),(1080,1920),(640,360)]:
    for count in [0,1,3,8,20]:

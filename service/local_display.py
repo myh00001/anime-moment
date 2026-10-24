@@ -4,7 +4,7 @@ import sys,threading,time,json,re,subprocess,urllib.request
 from collections import deque
 from resource_monitor import ResourceMonitor,corner_action
 from display_settings import DEFAULT_SETTINGS,load_settings,save_settings,cover_geometry,output_dimensions
-from festival_settings import load_options,save_options,wall_geometry,list_printers,banner_geometry
+from festival_settings import load_options,save_options,wall_geometry,list_printers,banner_geometry,photo_aspect
 from capture_hud import draw_capture_hud
 from festival_banner import draw_banner
 ROOT=Path(__file__).resolve().parent
@@ -73,6 +73,9 @@ class Player:
   self.running=False
   if Gtk.main_level()>0:Gtk.main_quit()
  def add_photo(self,photo):
+  try:
+   if photo_aspect(GdkPixbuf.Pixbuf.get_file_info(str(photo))) is None:return False
+  except Exception:return False
   photo=Path(photo);self.gallery_paths=([photo]+[p for p in self.gallery_paths if p!=photo])[:100]
   self.schedule_wall_layout();self.gallery.queue_draw()
   return False
@@ -80,9 +83,10 @@ class Player:
   if not self.wall_pending:self.wall_pending=True;GLib.idle_add(self.layout_wall)
  def gallery_geometry(self):
   aspect=16/9
-  if self.gallery_paths:
+  for path in self.gallery_paths:
    try:
-    info=GdkPixbuf.Pixbuf.get_file_info(str(self.gallery_paths[0]));aspect=info[1]/max(1,info[2])
+    valid=photo_aspect(GdkPixbuf.Pixbuf.get_file_info(str(path)))
+    if valid is not None:aspect=valid;break
    except Exception:pass
   return wall_geometry(self.content.get_allocated_width(),self.content.get_allocated_height(),self.festival_settings['gallery_count'],aspect)
  def layout_wall(self):
