@@ -9,3 +9,15 @@
 权重留在板端 local-vlm，不随 Git 发布。需要 internvl2b-candidate 下的 language.gguf、mmproj.gguf、vision.hbm，以及 Qwen3-0.6B-Q8_0.gguf。默认 2B；FESTIVAL_GENERAL_VLM_SIZE=1B 可选择已有 1B CPU 路径。资源目录从服务文件所在位置定位。
 
 BPU 视觉特征桥接使用可选 S100_VLM_EMBED_FILE，严格检查特征形状、长度和有限值；每次原图独立编码，禁用跨图提示缓存。已有 llama.cpp-b11669 源码时，可运行 scripts/build_general_report_bridge.py --root <服务目录>，构建隔离运行时 build-general-report；成功验证后才写入启用标记。原 CPU 运行时不覆盖。编码器只在拍摄后的独占阶段加载，预热只加载语言解码器。
+
+## S100 语言 BPU 兼容性检查（2026-10-24）
+
+本轮完成接口与模型格式检查，没有获得完整语言 BPU 推理或加速结果，未替换生产运行时。板端未发现 libxlm、oellm_build 或已编译的语言 HBM；现有 InternVL HBM 是视觉编码器。
+
+核对官方 D-Robotics_LLM_S100_1.0.0_Doc.zip 中的 API 枚举，XLM_MODEL_TYPE_INTERNVL=0 注释明确为 `not support yet`。其 oellm_build 手册的模型选项只有 deepseek-qwen-1_5b、deepseek-qwen-7b、qwen2_5-1_5b、qwen2_5-7b、internlm2-1_8b、qwen2_5-omni-3b，没有 Qwen3。InternVL3-2B 的官方配置中 llm_config 为 Qwen2ForCausalLM，但这不能证明整个 VLM 或外部视觉特征注入已受 SDK 支持。未发现当前公开接口可以直接衔接现有 256×1536 视觉特征。
+
+官方 oellm_server 的 model-type 0 名称也不能作为支持证据：README 明确当前 HTTP 接口只实现文字聊天，InternVL 图像输入需另外扩展。S600 的 Qwen3/InternVL 支持和性能表不可当作 S100 的可用模型或性能。上述结论限定于此次核对的公开 S100 SDK 1.0.0，不代表未来版本或其他适配永远不支持。
+
+保留上一轮 BPU 视觉编码 + CPU 语言生成。后续只有取得适配 S100 nash-e 的编译器、权重和视觉输入接口后，才可对同图进行准确性与延迟对照；不能把更换成普通 Qwen2.5 文字模型当作同一个看图模型的加速。
+
+来源：[S100 SDK](https://developer.d-robotics.cc/rdk_s_doc/Advanced_development/toolchain_development/LLM_Toolchain/rdk_s100/s100_LLM_Toolchain)、[API 枚举](https://developer.d-robotics.cc/oe_llm_s100p_doc/guide/api/api_details/structure_and_enumeration_type.html)、[编译器参数](https://developer.d-robotics.cc/oe_llm_s100p_doc/guide/tool_introduction/oellm_build)、[官方服务源码](https://github.com/D-Robotics/oellm_server/tree/develop)。
