@@ -32,9 +32,8 @@ def warm_local_model():
                    env=env,check=True,capture_output=True,timeout=6)
 
 def warm_report_runtime():
-    """Template reporting needs the helper environment, not a text server."""
-    from report_category import available
-    if available():return
+    """Start the local writing model and cache its helper environment."""
+    warm_local_model()
     helper_environment(time.monotonic()+3)
 
 def clean_report(value):
@@ -240,11 +239,49 @@ class LocalReporter:
             result=json.load(response)
         return result['choices'][0]['message']['content']
 
+class GeneralVLMReporter:
+    """Generate a newspaper paragraph directly from this capture's original."""
+    def generate(self,photo):
+        import signal
+        warm_local_model()
+        helper=Path(__file__).with_name('report_general_vlm.py')
+        env=helper_environment(time.monotonic()+3)
+        command=['python3',str(helper),str(photo)]
+        if env is None:
+            command=['bash','-c','source /opt/tros/humble/setup.bash && exec python3 "$@"',
+                     'general-report',str(helper),str(photo)]
+        process=subprocess.Popen(command,stdout=subprocess.PIPE,stderr=subprocess.PIPE,
+                                 start_new_session=True,env=env)
+        try:
+            output,_=process.communicate(timeout=38)
+        except subprocess.TimeoutExpired:
+            os.killpg(process.pid,signal.SIGKILL);process.communicate()
+            raise TimeoutError('通用看图大模型生成超时')
+        if process.returncode:raise RuntimeError('通用看图大模型生成失败')
+        lines=output.decode('utf-8',errors='replace').splitlines()
+        result=json.loads(next(line.split('=',1)[1] for line in reversed(lines)
+                               if line.startswith('GENERAL_VLM_RESULT=')))
+        self.backend=result['backend'];self.vision_model=result['model']
+        self.vision_decoder='generative multimodal decoder'
+        self.vision_seconds=result['seconds']
+        self.last_caption=result['text']
+        writer=LocalReporter()
+        deadline=time.monotonic()+15
+        writer.wait_ready(deadline,True)
+        from report_general_vlm import PROMPT as general_prompt
+        payload={'messages':[{'role':'system','content':general_prompt},
+                 {'role':'user','content':'画面观察：'+self.last_caption+'\n请写一段简短的现场报道，仅依据观察，不添加观察之外的人物或动作。/no_think'}],
+                 'max_tokens':160,'temperature':0,'chat_template_kwargs':{'enable_thinking':False},
+                 'grammar':'root ::= first "。AI" second "。"\nfirst ::= [一-鿿] [一-鿿，、]{10,35}\nsecond ::= [一-鿿] [一-鿿，、]{14,32}',
+                 'stream':False}
+        return clean_report(writer.complete(WRITER_ENDPOINT,payload,deadline))
+
+
 def make_report(photo,enabled,reporter=None):
     if not enabled:return {'enabled':False,'state':'disabled'}
     start=time.monotonic()
     try:
-        engine=reporter or LocalReporter(template_only=True);text=engine.generate(photo)
+        engine=reporter or GeneralVLMReporter();text=engine.generate(photo)
         result={'enabled':True,'state':'generated','text':text,
                 'seconds':round(time.monotonic()-start,2)}
         if isinstance(getattr(engine,'last_caption',None),str):result['observation']=engine.last_caption
