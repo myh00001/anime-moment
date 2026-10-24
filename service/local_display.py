@@ -156,7 +156,7 @@ class Player:
  def warm_report_model(self):
   def worker():
    try:
-    from local_report import warm_local_model
+    from local_report import warm_report_runtime as warm_local_model
     warm_local_model()
    except Exception as error:print('REPORT_WARMUP',type(error).__name__,flush=True)
   threading.Thread(target=worker,daemon=True).start()

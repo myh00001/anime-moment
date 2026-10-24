@@ -1,5 +1,6 @@
 """Optional image-grounded reporting through a loopback-only local VLM."""
 import base64
+import hashlib
 import io
 import json
 import os
@@ -29,6 +30,10 @@ def warm_local_model():
              DBUS_SESSION_BUS_ADDRESS=f'unix:path=/run/user/{os.getuid()}/bus')
     subprocess.run(['systemctl','--user','start','anime-report-vlm.service'],
                    env=env,check=True,capture_output=True,timeout=6)
+
+def warm_report_runtime():
+    """Template reporting needs the helper environment, not a text server."""
+    helper_environment(time.monotonic()+3)
 
 def clean_report(value):
     value=re.sub(r'<think>.*?</think>','',str(value),flags=re.S)
@@ -74,18 +79,36 @@ def validate_clothing(text,observation):
             raise ValueError('Unsupported clothing description')
     return text
 
+def template_report(observation,photo):
+    scoped=upper_clothing_observation(observation)
+    labels={'jacket':'夹克','coat':'外套','hoodie':'连帽上衣',
+            'sweater':'毛衣','t-shirt':'T恤','shirt':'衬衫'}
+    if scoped is None:
+        return '镜头定格了现场的一刻，AI动漫拍照为科技节留下专属纪念。'
+    category=scoped.removeprefix('The visible person wears a ').rstrip('.')
+    garment=labels[category]
+    variants=[f'体验者身着{garment}，镜头记录下校园科技节的一刻。AI动漫拍照将这一刻化为专属纪念。',
+              f'镜头里的体验者身穿{garment}。借助AI动漫拍照，现场影像化作一份科技节纪念。',
+              f'身着{garment}的体验者留下影像，AI动漫拍照把科技体验与校园记忆连接起来。']
+    index=hashlib.sha256(str(Path(photo).parent.name).encode()).digest()[0]%len(variants)
+    return validate_clothing(variants[index],scoped)
+
+
 class LocalReporter:
-    def __init__(self,timeout=35,starter=warm_local_model):
+    def __init__(self,timeout=35,starter=warm_local_model,template_only=False):
         self.timeout=timeout;self.starter=starter
+        self.template_only=template_only
         self.opener=urllib.request.build_opener(urllib.request.ProxyHandler({}))
     def generate(self,photo):
         from PIL import Image
         deadline=time.monotonic()+self.timeout
         use_bpu=bpu_available()
         self.backend='S100 BPU vision + CPU text' if use_bpu else 'CPU vision + CPU text'
+        if self.template_only:self.backend='S100 BPU vision + template' if use_bpu else 'CPU vision + template'
         prefill=False
         if use_bpu:
-            prefill=self.can_prefill(photo)
+            if self.template_only:self.prefill_subject=self.probe_subject(photo)
+            else:prefill=self.can_prefill(photo)
             if self.prefill_subject is not None and self.prefill_subject['subject_visible'] is False:
                 from report_bpu_caption import model_profile
                 self.subject=self.prefill_subject
@@ -93,7 +116,7 @@ class LocalReporter:
                 self.vision_seconds=0;self.vision_model=(model_profile() or {}).get('name','unknown')
                 self.vision_decoder='not run'
                 return '镜头定格了现场的一刻，AI动漫拍照为科技节留下专属纪念。'
-        self.starter()
+        if not self.template_only or not use_bpu:self.starter()
         # Load the writer while the independent BPU observation runs.
         if not use_bpu:self.wait_ready(deadline,use_bpu)
         if use_bpu:
@@ -140,6 +163,7 @@ class LocalReporter:
                 'max_tokens':36,'temperature':.1,'stream':False}
             self.last_caption=self.complete(ENDPOINT,payload,deadline).strip()
         if len(self.last_caption)<8:raise ValueError('本地看图结果无效')
+        if self.template_only:return template_report(self.last_caption,photo)
         if use_bpu:self.wait_ready(deadline,use_bpu)
         payload={'model':'local-report-writer','messages':[
             {'role':'system','content':PROMPT},
@@ -160,14 +184,17 @@ class LocalReporter:
         self.prefill_subject=None
         if not Path(photo).is_file():return False
         if self.writer_cache_ready(.1) is True:return False
+        self.prefill_subject=self.probe_subject(photo)
+        return bool(self.prefill_subject and self.prefill_subject['subject_visible'])
+    def probe_subject(self,photo):
+        if not Path(photo).is_file():return None
         import tempfile
         from report_subject import prepare_subject
         root=Path(__file__).resolve().parent
         try:
             with tempfile.TemporaryDirectory(prefix='prefill-subject-') as folder:
-                self.prefill_subject=prepare_subject(photo,Path(folder)/'view.jpg',512,root)
-                return self.prefill_subject['subject_visible']
-        except Exception:return False
+                return prepare_subject(photo,Path(folder)/'view.jpg',512,root)
+        except Exception:return None
     def prefill_writer(self,deadline):
         self.wait_ready(deadline,True)
         if self.writer_cache_ready(min(2,max(.1,deadline-time.monotonic()))) is not False:return
@@ -201,7 +228,7 @@ def make_report(photo,enabled,reporter=None):
     if not enabled:return {'enabled':False,'state':'disabled'}
     start=time.monotonic()
     try:
-        engine=reporter or LocalReporter();text=engine.generate(photo)
+        engine=reporter or LocalReporter(template_only=True);text=engine.generate(photo)
         result={'enabled':True,'state':'generated','text':text,
                 'seconds':round(time.monotonic()-start,2)}
         if isinstance(getattr(engine,'last_caption',None),str):result['observation']=engine.last_caption
