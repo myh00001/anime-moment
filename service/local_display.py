@@ -133,8 +133,9 @@ class Player:
   self.print_note=Gtk.Label(label='');self.print_note.set_line_wrap(True);self.print_note.set_max_width_chars(35);self.print_note.set_xalign(0);grid.attach(self.print_note,0,5,3,1)
   self.banner_height=Gtk.SpinButton.new_with_range(0,1600,10);self.banner_height.set_numeric(True);self.banner_height.set_value(self.festival_settings.get('banner_height',0))
   grid.attach(Gtk.Label(label='顶部横幅高度',xalign=0),0,6,1,1);grid.attach(self.banner_height,1,6,1,1);grid.attach(Gtk.Label(label='像素，0 = 自动'),2,6,1,1)
-  self.ai_report=Gtk.CheckButton(label='启用本地 AI 报道生成（根据照片）');self.ai_report.set_active(self.festival_settings.get('ai_report',False));grid.attach(self.ai_report,0,7,3,1)
-  ai_note=Gtk.Label(label='开启后自动看图写报道；加载或生成失败时使用原有文案。',xalign=0);ai_note.set_line_wrap(True);ai_note.set_max_width_chars(35);grid.attach(ai_note,0,8,3,1)
+  self.ai_report=Gtk.CheckButton(label='启用 AI 报道生成（根据照片）');self.ai_report.set_active(self.festival_settings.get('ai_report',False));grid.attach(self.ai_report,0,7,3,1)
+  from report_settings_ui import build_report_controls
+  grid.attach(build_report_controls(self,ROOT),0,8,3,1)
   self.pdf_only.connect('toggled',lambda button:self.printer_choice.set_sensitive(not button.get_active()));self.printer_choice.set_sensitive(not self.pdf_only.get_active())
   self.festival_expander.connect('notify::expanded',lambda *_:GLib.idle_add(self.resize_panel))
   self.refresh_printers()
@@ -149,11 +150,13 @@ class Player:
  def apply_festival_settings(self,*_):
   value={'gallery_count':self.photo_count.get_value_as_int(),'print_enabled':not self.pdf_only.get_active(),'printer':self.printer_choice.get_active_id() or self.festival_settings['printer'],'banner_height':self.banner_height.get_value_as_int(),'ai_report':self.ai_report.get_active()}
   try:
+   value['report_provider']=self.report_controls.provider();self.report_controls.save()
    self.festival_settings=save_options(ROOT/'festival-settings.json',value);self.schedule_wall_layout()
-   if value['ai_report']:self.warm_report_model()
+   if value['ai_report'] and value['report_provider']=='local':self.warm_report_model()
    self.print_note.set_text('设置已保存；下一张照片仅保存 PDF。' if not value['print_enabled'] else '设置已保存；下一张使用 '+value['printer']+' 打印。')
   except (ValueError,OSError) as error:self.print_note.set_text('设置未保存：'+str(error))
  def warm_report_model(self):
+  if self.festival_settings.get('report_provider','local')!='local':return
   def worker():
    try:
     from local_report import warm_report_runtime as warm_local_model

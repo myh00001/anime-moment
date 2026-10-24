@@ -36,3 +36,8 @@ local-vlm/
 *.zip
 *.tar.gz
 *.so
+
+service/report-secrets.json
+service/.report-secrets-*.tmp
+report-secrets.json
+.report-secrets-*.tmp

@@ -1,4 +1,4 @@
-"""Local-only gesture capture and A5 newspaper; no camera data is uploaded."""
+"""Gesture capture and A5 newspaper, with opt-in local or cloud reporting."""
 from pathlib import Path
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -8,6 +8,7 @@ from festival_settings import DEFAULT_OPTIONS, normalize_options
 from festival_weather import WeatherCache,weather_label
 from weather_icon import draw_weather_icon
 from local_report import make_report
+from report_router import generate_report
 
 ROOT = Path(__file__).resolve().parent
 
@@ -186,7 +187,7 @@ class Festival:
             original=original_bgr.copy() if original_bgr is not None else None
             try:
                 if options.get('ai_report',False):
-                    self.ai_busy_at=time.monotonic();self.report_stage='AI 正在生成报道';self.pickup_at=0
+                    self.ai_busy_at=time.monotonic();self.report_stage='云端 AI 正在生成报道' if options.get('report_provider')=='deepseek' else 'AI 正在生成报道';self.pickup_at=0
                 self.jobs.put_nowait((rgb.copy(),options,original));self.shutter_at=time.monotonic();self.status='正在生成报纸…'
             except queue.Full:
                 self.ai_busy_at=0;self.report_stage='';self.status='打印任务繁忙，请稍后再拍'
@@ -312,7 +313,7 @@ class Festival:
                 if original_bgr is not None:
                     Image.fromarray(original_bgr[:,:,::-1]).save(original,quality=96,subsampling=0)
                     record['report_source']='original.jpg'
-                report=make_report(original,options.get('ai_report',False)) if inference_ready else {'enabled':True,'state':'fallback','reason':'InferenceNotIdle'}
+                report=generate_report(original,options,ROOT,local=make_report) if inference_ready else {'enabled':True,'state':'fallback','reason':'InferenceNotIdle'}
                 record['ai_report']=report;journal()
                 if options.get('ai_report',False):self.report_stage='正在排版纪念报纸'
                 pdf=folder/'newspaper.pdf';weather=self.weather.snapshot() if hasattr(self,'weather') else None;newspaper(photo,pdf,weather=weather,report=report.get('text'))
