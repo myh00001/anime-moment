@@ -1,0 +1,409 @@
+{
+  "model": "Marqo-FashionSigLIP INT8 + YOLOX CPU",
+  "holdout": {
+    "n": 34,
+    "correct": 28,
+    "accuracy": 0.8235294117647058,
+    "groups": {
+      "0": {
+        "n": 6,
+        "correct": 6
+      },
+      "1": {
+        "n": 6,
+        "correct": 4
+      },
+      "4": {
+        "n": 6,
+        "correct": 5
+      },
+      "9": {
+        "n": 6,
+        "correct": 5
+      },
+      "10": {
+        "n": 6,
+        "correct": 6
+      },
+      "11": {
+        "n": 4,
+        "correct": 2
+      }
+    },
+    "case_manifest_sha256": "dc2d3526c44ff3836e75d8d528627741c700e864cb3a47649281817add4ba1b1",
+    "cases": [
+      {
+        "case_id": "H01",
+        "source_image_id": 13560,
+        "expected": [
+          "shirt"
+        ],
+        "predicted": "shirt",
+        "correct": true,
+        "seconds": 0.51
+      },
+      {
+        "case_id": "H02",
+        "source_image_id": 16186,
+        "expected": [
+          "shirt"
+        ],
+        "predicted": "shirt",
+        "correct": true,
+        "seconds": 0.44
+      },
+      {
+        "case_id": "H03",
+        "source_image_id": 18328,
+        "expected": [
+          "shirt"
+        ],
+        "predicted": "shirt",
+        "correct": true,
+        "seconds": 0.437
+      },
+      {
+        "case_id": "H04",
+        "source_image_id": 11791,
+        "expected": [
+          "shirt"
+        ],
+        "predicted": "shirt",
+        "correct": true,
+        "seconds": 0.437
+      },
+      {
+        "case_id": "H05",
+        "source_image_id": 10222,
+        "expected": [
+          "shirt"
+        ],
+        "predicted": "shirt",
+        "correct": true,
+        "seconds": 0.437
+      },
+      {
+        "case_id": "H06",
+        "source_image_id": 10011,
+        "expected": [
+          "shirt"
+        ],
+        "predicted": "shirt",
+        "correct": true,
+        "seconds": 0.449
+      },
+      {
+        "case_id": "H07",
+        "source_image_id": 11446,
+        "expected": [
+          "t-shirt",
+          "hoodie"
+        ],
+        "predicted": "t-shirt",
+        "correct": true,
+        "seconds": 0.438
+      },
+      {
+        "case_id": "H08",
+        "source_image_id": 9290,
+        "expected": [
+          "t-shirt",
+          "hoodie"
+        ],
+        "predicted": "t-shirt",
+        "correct": true,
+        "seconds": 0.464
+      },
+      {
+        "case_id": "H09",
+        "source_image_id": 19898,
+        "expected": [
+          "t-shirt",
+          "hoodie"
+        ],
+        "predicted": "cape",
+        "correct": false,
+        "seconds": 0.439
+      },
+      {
+        "case_id": "H10",
+        "source_image_id": 18987,
+        "expected": [
+          "t-shirt",
+          "hoodie"
+        ],
+        "predicted": "sweater",
+        "correct": false,
+        "seconds": 0.429
+      },
+      {
+        "case_id": "H11",
+        "source_image_id": 16892,
+        "expected": [
+          "t-shirt",
+          "hoodie"
+        ],
+        "predicted": "t-shirt",
+        "correct": true,
+        "seconds": 0.452
+      },
+      {
+        "case_id": "H12",
+        "source_image_id": 12831,
+        "expected": [
+          "t-shirt",
+          "hoodie"
+        ],
+        "predicted": "t-shirt",
+        "correct": true,
+        "seconds": 0.437
+      },
+      {
+        "case_id": "H13",
+        "source_image_id": 9147,
+        "expected": [
+          "jacket"
+        ],
+        "predicted": "jacket",
+        "correct": true,
+        "seconds": 0.435
+      },
+      {
+        "case_id": "H14",
+        "source_image_id": 18936,
+        "expected": [
+          "jacket"
+        ],
+        "predicted": "jacket",
+        "correct": true,
+        "seconds": 0.446
+      },
+      {
+        "case_id": "H15",
+        "source_image_id": 10747,
+        "expected": [
+          "jacket"
+        ],
+        "predicted": "coat",
+        "correct": false,
+        "seconds": 0.433
+      },
+      {
+        "case_id": "H16",
+        "source_image_id": 9468,
+        "expected": [
+          "jacket"
+        ],
+        "predicted": "jacket",
+        "correct": true,
+        "seconds": 0.432
+      },
+      {
+        "case_id": "H17",
+        "source_image_id": 10716,
+        "expected": [
+          "jacket"
+        ],
+        "predicted": "jacket",
+        "correct": true,
+        "seconds": 0.442
+      },
+      {
+        "case_id": "H18",
+        "source_image_id": 20618,
+        "expected": [
+          "jacket"
+        ],
+        "predicted": "jacket",
+        "correct": true,
+        "seconds": 0.436
+      },
+      {
+        "case_id": "H19",
+        "source_image_id": 14811,
+        "expected": [
+          "coat"
+        ],
+        "predicted": "coat",
+        "correct": true,
+        "seconds": 0.459
+      },
+      {
+        "case_id": "H20",
+        "source_image_id": 18159,
+        "expected": [
+          "coat"
+        ],
+        "predicted": "coat",
+        "correct": true,
+        "seconds": 0.446
+      },
+      {
+        "case_id": "H21",
+        "source_image_id": 13507,
+        "expected": [
+          "coat"
+        ],
+        "predicted": "coat",
+        "correct": true,
+        "seconds": 0.442
+      },
+      {
+        "case_id": "H22",
+        "source_image_id": 19484,
+        "expected": [
+          "coat"
+        ],
+        "predicted": "coat",
+        "correct": true,
+        "seconds": 0.441
+      },
+      {
+        "case_id": "H23",
+        "source_image_id": 16454,
+        "expected": [
+          "coat"
+        ],
+        "predicted": "jacket",
+        "correct": false,
+        "seconds": 0.449
+      },
+      {
+        "case_id": "H24",
+        "source_image_id": 9791,
+        "expected": [
+          "coat"
+        ],
+        "predicted": "coat",
+        "correct": true,
+        "seconds": 0.449
+      },
+      {
+        "case_id": "H25",
+        "source_image_id": 13498,
+        "expected": [
+          "dress"
+        ],
+        "predicted": "dress",
+        "correct": true,
+        "seconds": 0.433
+      },
+      {
+        "case_id": "H26",
+        "source_image_id": 19418,
+        "expected": [
+          "dress"
+        ],
+        "predicted": "dress",
+        "correct": true,
+        "seconds": 0.429
+      },
+      {
+        "case_id": "H27",
+        "source_image_id": 11522,
+        "expected": [
+          "dress"
+        ],
+        "predicted": "dress",
+        "correct": true,
+        "seconds": 0.478
+      },
+      {
+        "case_id": "H28",
+        "source_image_id": 15870,
+        "expected": [
+          "dress"
+        ],
+        "predicted": "dress",
+        "correct": true,
+        "seconds": 0.663
+      },
+      {
+        "case_id": "H29",
+        "source_image_id": 9016,
+        "expected": [
+          "dress"
+        ],
+        "predicted": "dress",
+        "correct": true,
+        "seconds": 0.438
+      },
+      {
+        "case_id": "H30",
+        "source_image_id": 10533,
+        "expected": [
+          "dress"
+        ],
+        "predicted": "dress",
+        "correct": true,
+        "seconds": 0.444
+      },
+      {
+        "case_id": "H31",
+        "source_image_id": 16956,
+        "expected": [
+          "jumpsuit"
+        ],
+        "predicted": "jumpsuit",
+        "correct": true,
+        "seconds": 0.442
+      },
+      {
+        "case_id": "H32",
+        "source_image_id": 9411,
+        "expected": [
+          "jumpsuit"
+        ],
+        "predicted": "coat",
+        "correct": false,
+        "seconds": 0.43
+      },
+      {
+        "case_id": "H33",
+        "source_image_id": 9112,
+        "expected": [
+          "jumpsuit"
+        ],
+        "predicted": "jumpsuit",
+        "correct": true,
+        "seconds": 0.438
+      },
+      {
+        "case_id": "H34",
+        "source_image_id": 20081,
+        "expected": [
+          "jumpsuit"
+        ],
+        "predicted": "shirt",
+        "correct": false,
+        "seconds": 0.431
+      }
+    ]
+  },
+  "development": {
+    "n": 63,
+    "correct": 48,
+    "accuracy": 0.7619047619047619
+  },
+  "report_pdf_seconds": [
+    2.231,
+    1.189,
+    1.195,
+    1.187,
+    1.185,
+    1.123,
+    1.121,
+    1.184,
+    1.019
+  ],
+  "report_pdf_max_seconds": 2.2310335400006807,
+  "first_call_report_pdf_seconds": 2.2310335400006807,
+  "live_including_countdown_seconds": 6.673,
+  "live_no_person_guard": true,
+  "asset_sha256": {
+    "person.onnx": "c5c2d13e59ae883e6af3b45daea64af4833a4951c92d116ec270d9ddbe998063",
+    "vision.onnx": "f1009cfce0eedd409f601e8351eedab72e8529641105eee6517821a9a634a2f4",
+    "categories.npz": "6fdee276eb2aaa3fa86f7a88ab138ef1e06f2c5964b593c9644ef1693272ecc8"
+  },
+  "no_test_prints": true
+}

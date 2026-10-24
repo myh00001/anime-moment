@@ -1,0 +1,64 @@
+{
+  "labels": {
+    "shirt": [
+      "shirt",
+      "blouse",
+      "button up shirt"
+    ],
+    "t-shirt": [
+      "t-shirt",
+      "sweatshirt",
+      "casual top"
+    ],
+    "sweater": [
+      "sweater",
+      "pullover sweater",
+      "knit sweater"
+    ],
+    "cardigan": [
+      "cardigan",
+      "open front knitted cardigan"
+    ],
+    "jacket": [
+      "jacket",
+      "blazer",
+      "bomber jacket",
+      "leather jacket"
+    ],
+    "coat": [
+      "coat",
+      "long coat",
+      "trench coat",
+      "overcoat"
+    ],
+    "hoodie": [
+      "hoodie",
+      "hooded sweatshirt",
+      "zip up hoodie"
+    ],
+    "vest": [
+      "vest",
+      "sleeveless vest",
+      "waistcoat"
+    ],
+    "dress": [
+      "dress",
+      "one piece dress",
+      "gown"
+    ],
+    "jumpsuit": [
+      "jumpsuit",
+      "romper",
+      "overalls"
+    ],
+    "cape": [
+      "cape",
+      "poncho"
+    ]
+  },
+  "templates": [
+    "a photo of a person wearing a {}.",
+    "a {}.",
+    "a fashion photograph of a {}."
+  ]
+}

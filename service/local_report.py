@@ -33,6 +33,8 @@ def warm_local_model():
 
 def warm_report_runtime():
     """Template reporting needs the helper environment, not a text server."""
+    from report_category import available
+    if available():return
     helper_environment(time.monotonic()+3)
 
 def clean_report(value):
@@ -52,18 +54,20 @@ def clean_report(value):
     elif value[-1] not in '。！？':value=value[:95].rstrip('，、；：')+'。'
     return value
 
-def upper_clothing_observation(value):
+def upper_clothing_observation(value,full_person=False):
     """Restrict upper-body views to a garment category, excluding unseen lower body."""
     source=value.lower()
     # A mentioned category is not evidence when the caption hedges or negates it.
     if re.search(r"\b(maybe|perhaps|possibly|probably|unclear|uncertain)\b|"
                  r"\b(could|might|may)\s+be\b|\b(?:cannot|can't|hard to)\s+(?:tell|see)\b|"
-                 r"\b(?:no|not|without)\b.{0,35}\b(?:person|jacket|coat|hoodie|sweater|shirt)\b|"
-                 r"\b(?:jacket|coat|hoodie|sweater|shirt)\b.{0,20}\bor\b",source):
+                 r"\b(?:no|not|without)\b.{0,35}\b(?:person|jacket|coat|hoodie|sweater|shirt|blouse|cardigan|jumpsuit|dress|vest|cape)\b|"
+                 r"\b(?:jacket|coat|hoodie|sweater|shirt|blouse|cardigan|jumpsuit|dress|vest|cape)\b.{0,20}\bor\b",source):
         return None
-    for pattern,label in [(r'\bjacket\b','jacket'),(r'\bcoat\b','coat'),
+    extra=[(r'\bcardigan\b','cardigan'),(r'\bjumpsuit\b','jumpsuit'),
+           (r'\bdress\b','dress'),(r'\bvest\b','vest'),(r'\bcape\b','cape')] if full_person else []
+    for pattern,label in extra+[(r'\bjacket\b','jacket'),(r'\bcoat\b','coat'),
                           (r'\bhoodie\b','hoodie'),(r'\bsweater\b','sweater'),
-                          (r'\bt-?shirt\b','t-shirt'),(r'\bshirt\b','shirt')]:
+                          (r'\bt-?shirt\b','t-shirt'),(r'\b(?:shirt|blouse)\b','shirt')]:
         if re.search(pattern,source):return 'The visible person wears a '+label+'.'
     return None
 
@@ -79,9 +83,10 @@ def validate_clothing(text,observation):
             raise ValueError('Unsupported clothing description')
     return text
 
-def template_report(observation,photo):
-    scoped=upper_clothing_observation(observation)
+def template_report(observation,photo,full_person=False):
+    scoped=upper_clothing_observation(observation,full_person=full_person)
     labels={'jacket':'夹克','coat':'外套','hoodie':'连帽上衣',
+            'cardigan':'开衫','vest':'马甲','dress':'连衣裙','jumpsuit':'连体衣','cape':'斗篷',
             'sweater':'毛衣','t-shirt':'T恤','shirt':'衬衫'}
     if scoped is None:
         return '镜头定格了现场的一刻，AI动漫拍照为科技节留下专属纪念。'
@@ -101,6 +106,17 @@ class LocalReporter:
         self.opener=urllib.request.build_opener(urllib.request.ProxyHandler({}))
     def generate(self,photo):
         from PIL import Image
+        from report_category import available as category_available, classify
+        if self.template_only and category_available():
+            observation=classify(photo)
+            self.backend='CPU fashion recognition + template'
+            self.vision_model=observation['model'];self.vision_decoder=observation['decoder']
+            self.vision_seconds=observation['seconds']
+            self.subject={key:observation[key] for key in ('subject_visible','source_box') if key in observation}
+            category=observation['category']
+            self.last_caption=('The visible person wears a '+category+'.' if category
+                               else 'No reliable person for clothing description.')
+            return template_report(self.last_caption,photo,full_person=True)
         deadline=time.monotonic()+self.timeout
         use_bpu=bpu_available()
         self.backend='S100 BPU vision + CPU text' if use_bpu else 'CPU vision + CPU text'
