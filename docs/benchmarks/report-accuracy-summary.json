@@ -1,0 +1,264 @@
+{
+  "completed_cases": 72,
+  "source_hashes": {
+    "report_bpu_caption.py": "d25f9118bc963f1c76d4c7ed8be2637942a12d33208c6b44553738a534828f04",
+    "report_subject.py": "7168ddc82c55fa803e9a360cef51215c3ed957b49114f7ff0c87cdf95f20a8e0",
+    "local_report.py": "9fb746ef1f1180d495f6af0168cc44f70480b0e50a893a9bd6bd8438ecff383e"
+  },
+  "supported_public_originals": {
+    "n": 35,
+    "counts": {
+      "correct": 16,
+      "abstain": 13,
+      "wrong_specific": 6
+    },
+    "strict_accuracy_including_abstentions": 0.45714285714285713,
+    "precision_when_specific": 0.7272727272727273,
+    "specific_coverage": 0.6285714285714286
+  },
+  "groups": [
+    {
+      "kind": "derived",
+      "group": "blur",
+      "n": 1,
+      "counts": {
+        "correct": 1
+      },
+      "strict_accuracy_including_abstentions": 1.0,
+      "precision_when_specific": 1.0,
+      "specific_coverage": 1.0
+    },
+    {
+      "kind": "derived",
+      "group": "clothing_without_face",
+      "n": 1,
+      "counts": {
+        "correct_neutral": 1
+      },
+      "neutral_fraction": 1.0
+    },
+    {
+      "kind": "derived",
+      "group": "large_subject",
+      "n": 1,
+      "counts": {
+        "correct": 1
+      },
+      "strict_accuracy_including_abstentions": 1.0,
+      "precision_when_specific": 1.0,
+      "specific_coverage": 1.0
+    },
+    {
+      "kind": "derived",
+      "group": "low_light",
+      "n": 1,
+      "counts": {
+        "correct": 1
+      },
+      "strict_accuracy_including_abstentions": 1.0,
+      "precision_when_specific": 1.0,
+      "specific_coverage": 1.0
+    },
+    {
+      "kind": "derived",
+      "group": "medium_subject",
+      "n": 1,
+      "counts": {
+        "correct": 1
+      },
+      "strict_accuracy_including_abstentions": 1.0,
+      "precision_when_specific": 1.0,
+      "specific_coverage": 1.0
+    },
+    {
+      "kind": "derived",
+      "group": "no_person",
+      "n": 1,
+      "counts": {
+        "correct_neutral": 1
+      },
+      "neutral_fraction": 1.0
+    },
+    {
+      "kind": "derived",
+      "group": "sideways_camera",
+      "n": 1,
+      "counts": {
+        "abstain": 1
+      },
+      "strict_accuracy_including_abstentions": 0.0,
+      "precision_when_specific": null,
+      "specific_coverage": 0.0
+    },
+    {
+      "kind": "derived",
+      "group": "small_subject",
+      "n": 1,
+      "counts": {
+        "correct": 1
+      },
+      "strict_accuracy_including_abstentions": 1.0,
+      "precision_when_specific": 1.0,
+      "specific_coverage": 1.0
+    },
+    {
+      "kind": "derived",
+      "group": "two_people_larger_jacket_subject",
+      "n": 1,
+      "counts": {
+        "correct": 1
+      },
+      "strict_accuracy_including_abstentions": 1.0,
+      "precision_when_specific": 1.0,
+      "specific_coverage": 1.0
+    },
+    {
+      "kind": "public_original",
+      "group": "cape",
+      "n": 3,
+      "counts": {
+        "unsupported_specific_needs_review": 1,
+        "abstain_unsupported": 2
+      },
+      "neutral_fraction": 0.6666666666666666
+    },
+    {
+      "kind": "public_original",
+      "group": "cardigan",
+      "n": 7,
+      "counts": {
+        "abstain_unsupported": 7
+      },
+      "neutral_fraction": 1.0
+    },
+    {
+      "kind": "public_original",
+      "group": "coat",
+      "n": 6,
+      "counts": {
+        "wrong_specific": 2,
+        "correct": 4
+      },
+      "strict_accuracy_including_abstentions": 0.6666666666666666,
+      "precision_when_specific": 0.6666666666666666,
+      "specific_coverage": 1.0
+    },
+    {
+      "kind": "public_original",
+      "group": "collared_top",
+      "n": 1,
+      "counts": {
+        "abstain": 1
+      },
+      "strict_accuracy_including_abstentions": 0.0,
+      "precision_when_specific": null,
+      "specific_coverage": 0.0
+    },
+    {
+      "kind": "public_original",
+      "group": "dress",
+      "n": 6,
+      "counts": {
+        "abstain_unsupported": 6
+      },
+      "neutral_fraction": 1.0
+    },
+    {
+      "kind": "public_original",
+      "group": "hooded_jacket",
+      "n": 1,
+      "counts": {
+        "correct": 1
+      },
+      "strict_accuracy_including_abstentions": 1.0,
+      "precision_when_specific": 1.0,
+      "specific_coverage": 1.0
+    },
+    {
+      "kind": "public_original",
+      "group": "hoodie",
+      "n": 4,
+      "counts": {
+        "correct": 3,
+        "wrong_specific": 1
+      },
+      "strict_accuracy_including_abstentions": 0.75,
+      "precision_when_specific": 0.75,
+      "specific_coverage": 1.0
+    },
+    {
+      "kind": "public_original",
+      "group": "jacket",
+      "n": 6,
+      "counts": {
+        "abstain": 1,
+        "wrong_specific": 2,
+        "correct": 3
+      },
+      "strict_accuracy_including_abstentions": 0.5,
+      "precision_when_specific": 0.6,
+      "specific_coverage": 0.8333333333333334
+    },
+    {
+      "kind": "public_original",
+      "group": "jumpsuit",
+      "n": 6,
+      "counts": {
+        "abstain_unsupported": 6
+      },
+      "neutral_fraction": 1.0
+    },
+    {
+      "kind": "public_original",
+      "group": "shirt_blouse",
+      "n": 6,
+      "counts": {
+        "correct": 1,
+        "abstain": 5
+      },
+      "strict_accuracy_including_abstentions": 0.16666666666666666,
+      "precision_when_specific": 1.0,
+      "specific_coverage": 0.16666666666666666
+    },
+    {
+      "kind": "public_original",
+      "group": "sweater",
+      "n": 5,
+      "counts": {
+        "correct": 3,
+        "abstain": 2
+      },
+      "strict_accuracy_including_abstentions": 0.6,
+      "precision_when_specific": 1.0,
+      "specific_coverage": 0.6
+    },
+    {
+      "kind": "public_original",
+      "group": "top_tshirt_sweatshirt",
+      "n": 6,
+      "counts": {
+        "abstain": 4,
+        "correct": 1,
+        "wrong_specific": 1
+      },
+      "strict_accuracy_including_abstentions": 0.16666666666666666,
+      "precision_when_specific": 0.5,
+      "specific_coverage": 0.3333333333333333
+    },
+    {
+      "kind": "public_original",
+      "group": "vest",
+      "n": 6,
+      "counts": {
+        "abstain_unsupported": 6
+      },
+      "neutral_fraction": 1.0
+    }
+  ],
+  "notes": [
+    "Abstentions are not correct classifications.",
+    "Unsupported specific claims require image-level review.",
+    "Derived cases are separate and are not independent source images.",
+    "Small stratified sample; not a deployment-wide accuracy estimate."
+  ]
+}

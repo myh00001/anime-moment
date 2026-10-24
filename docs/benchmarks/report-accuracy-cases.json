@@ -1,0 +1,888 @@
+{
+  "sources": {
+    "report_bpu_caption.py": "d25f9118bc963f1c76d4c7ed8be2637942a12d33208c6b44553738a534828f04",
+    "report_subject.py": "7168ddc82c55fa803e9a360cef51215c3ed957b49114f7ff0c87cdf95f20a8e0",
+    "local_report.py": "9fb746ef1f1180d495f6af0168cc44f70480b0e50a893a9bd6bd8438ecff383e"
+  },
+  "results": [
+    {
+      "case_id": "F01",
+      "group": "shirt_blouse",
+      "accepted": [
+        "shirt"
+      ],
+      "kind": "public_original",
+      "source_image_id": 16931,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": "shirt",
+      "status": "correct"
+    },
+    {
+      "case_id": "F02",
+      "group": "shirt_blouse",
+      "accepted": [
+        "shirt"
+      ],
+      "kind": "public_original",
+      "source_image_id": 9014,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": null,
+      "status": "abstain"
+    },
+    {
+      "case_id": "F03",
+      "group": "shirt_blouse",
+      "accepted": [
+        "shirt"
+      ],
+      "kind": "public_original",
+      "source_image_id": 10395,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": null,
+      "status": "abstain"
+    },
+    {
+      "case_id": "F04",
+      "group": "shirt_blouse",
+      "accepted": [
+        "shirt"
+      ],
+      "kind": "public_original",
+      "source_image_id": 7780,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": null,
+      "status": "abstain"
+    },
+    {
+      "case_id": "F05",
+      "group": "shirt_blouse",
+      "accepted": [
+        "shirt"
+      ],
+      "kind": "public_original",
+      "source_image_id": 18374,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": false,
+      "predicted": null,
+      "status": "abstain"
+    },
+    {
+      "case_id": "F06",
+      "group": "shirt_blouse",
+      "accepted": [
+        "shirt"
+      ],
+      "kind": "public_original",
+      "source_image_id": 9914,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": null,
+      "status": "abstain"
+    },
+    {
+      "case_id": "F07",
+      "group": "top_tshirt_sweatshirt",
+      "accepted": [
+        "t-shirt",
+        "hoodie"
+      ],
+      "kind": "public_original",
+      "source_image_id": 20531,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": null,
+      "status": "abstain"
+    },
+    {
+      "case_id": "F08",
+      "group": "top_tshirt_sweatshirt",
+      "accepted": [
+        "t-shirt",
+        "hoodie"
+      ],
+      "kind": "public_original",
+      "source_image_id": 8671,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": null,
+      "status": "abstain"
+    },
+    {
+      "case_id": "F09",
+      "group": "top_tshirt_sweatshirt",
+      "accepted": [
+        "t-shirt",
+        "hoodie"
+      ],
+      "kind": "public_original",
+      "source_image_id": 11696,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": "t-shirt",
+      "status": "correct"
+    },
+    {
+      "case_id": "F10",
+      "group": "top_tshirt_sweatshirt",
+      "accepted": [
+        "t-shirt",
+        "hoodie"
+      ],
+      "kind": "public_original",
+      "source_image_id": 18529,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": null,
+      "status": "abstain"
+    },
+    {
+      "case_id": "F11",
+      "group": "top_tshirt_sweatshirt",
+      "accepted": [
+        "t-shirt",
+        "hoodie"
+      ],
+      "kind": "public_original",
+      "source_image_id": 9517,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": "shirt",
+      "status": "wrong_specific"
+    },
+    {
+      "case_id": "F12",
+      "group": "top_tshirt_sweatshirt",
+      "accepted": [
+        "t-shirt",
+        "hoodie"
+      ],
+      "kind": "public_original",
+      "source_image_id": 11803,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": null,
+      "status": "abstain"
+    },
+    {
+      "case_id": "F13",
+      "group": "sweater",
+      "accepted": [
+        "sweater"
+      ],
+      "kind": "public_original",
+      "source_image_id": 16721,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": "sweater",
+      "status": "correct"
+    },
+    {
+      "case_id": "F14",
+      "group": "sweater",
+      "accepted": [
+        "sweater"
+      ],
+      "kind": "public_original",
+      "source_image_id": 17313,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": "sweater",
+      "status": "correct"
+    },
+    {
+      "case_id": "F15",
+      "group": "sweater",
+      "accepted": [
+        "sweater"
+      ],
+      "kind": "public_original",
+      "source_image_id": 15783,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": false,
+      "predicted": null,
+      "status": "abstain"
+    },
+    {
+      "case_id": "F16",
+      "group": "sweater",
+      "accepted": [
+        "sweater"
+      ],
+      "kind": "public_original",
+      "source_image_id": 15769,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": null,
+      "status": "abstain"
+    },
+    {
+      "case_id": "F17",
+      "group": "sweater",
+      "accepted": [
+        "sweater"
+      ],
+      "kind": "public_original",
+      "source_image_id": 16711,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": "sweater",
+      "status": "correct"
+    },
+    {
+      "case_id": "F18",
+      "group": "cardigan",
+      "accepted": [],
+      "kind": "public_original",
+      "source_image_id": 19633,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": null,
+      "status": "abstain_unsupported"
+    },
+    {
+      "case_id": "F19",
+      "group": "jacket",
+      "accepted": [
+        "jacket"
+      ],
+      "kind": "public_original",
+      "source_image_id": 17356,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": null,
+      "status": "abstain"
+    },
+    {
+      "case_id": "F20",
+      "group": "jacket",
+      "accepted": [
+        "jacket"
+      ],
+      "kind": "public_original",
+      "source_image_id": 13428,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": "shirt",
+      "status": "wrong_specific"
+    },
+    {
+      "case_id": "F21",
+      "group": "jacket",
+      "accepted": [
+        "jacket"
+      ],
+      "kind": "public_original",
+      "source_image_id": 12279,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": "hoodie",
+      "status": "wrong_specific"
+    },
+    {
+      "case_id": "F22",
+      "group": "jacket",
+      "accepted": [
+        "jacket"
+      ],
+      "kind": "public_original",
+      "source_image_id": 15866,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": "jacket",
+      "status": "correct"
+    },
+    {
+      "case_id": "F23",
+      "group": "jacket",
+      "accepted": [
+        "jacket"
+      ],
+      "kind": "public_original",
+      "source_image_id": 16666,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": "jacket",
+      "status": "correct"
+    },
+    {
+      "case_id": "F24",
+      "group": "jacket",
+      "accepted": [
+        "jacket"
+      ],
+      "kind": "public_original",
+      "source_image_id": 12344,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": "jacket",
+      "status": "correct"
+    },
+    {
+      "case_id": "F25",
+      "group": "coat",
+      "accepted": [
+        "coat"
+      ],
+      "kind": "public_original",
+      "source_image_id": 13530,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": "jacket",
+      "status": "wrong_specific"
+    },
+    {
+      "case_id": "F26",
+      "group": "coat",
+      "accepted": [
+        "coat"
+      ],
+      "kind": "public_original",
+      "source_image_id": 14522,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": "jacket",
+      "status": "wrong_specific"
+    },
+    {
+      "case_id": "F27",
+      "group": "coat",
+      "accepted": [
+        "coat"
+      ],
+      "kind": "public_original",
+      "source_image_id": 15255,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": "coat",
+      "status": "correct"
+    },
+    {
+      "case_id": "F28",
+      "group": "coat",
+      "accepted": [
+        "coat"
+      ],
+      "kind": "public_original",
+      "source_image_id": 17737,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": "coat",
+      "status": "correct"
+    },
+    {
+      "case_id": "F29",
+      "group": "coat",
+      "accepted": [
+        "coat"
+      ],
+      "kind": "public_original",
+      "source_image_id": 9548,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": "coat",
+      "status": "correct"
+    },
+    {
+      "case_id": "F30",
+      "group": "coat",
+      "accepted": [
+        "coat"
+      ],
+      "kind": "public_original",
+      "source_image_id": 19157,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": "coat",
+      "status": "correct"
+    },
+    {
+      "case_id": "F31",
+      "group": "dress",
+      "accepted": [],
+      "kind": "public_original",
+      "source_image_id": 19292,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": false,
+      "predicted": null,
+      "status": "abstain_unsupported"
+    },
+    {
+      "case_id": "F32",
+      "group": "dress",
+      "accepted": [],
+      "kind": "public_original",
+      "source_image_id": 11761,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": null,
+      "status": "abstain_unsupported"
+    },
+    {
+      "case_id": "F33",
+      "group": "dress",
+      "accepted": [],
+      "kind": "public_original",
+      "source_image_id": 9845,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": null,
+      "status": "abstain_unsupported"
+    },
+    {
+      "case_id": "F34",
+      "group": "dress",
+      "accepted": [],
+      "kind": "public_original",
+      "source_image_id": 17968,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": null,
+      "status": "abstain_unsupported"
+    },
+    {
+      "case_id": "F35",
+      "group": "dress",
+      "accepted": [],
+      "kind": "public_original",
+      "source_image_id": 11070,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": null,
+      "status": "abstain_unsupported"
+    },
+    {
+      "case_id": "F36",
+      "group": "dress",
+      "accepted": [],
+      "kind": "public_original",
+      "source_image_id": 19124,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": null,
+      "status": "abstain_unsupported"
+    },
+    {
+      "case_id": "F37",
+      "group": "jumpsuit",
+      "accepted": [],
+      "kind": "public_original",
+      "source_image_id": 19413,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": null,
+      "status": "abstain_unsupported"
+    },
+    {
+      "case_id": "F38",
+      "group": "jumpsuit",
+      "accepted": [],
+      "kind": "public_original",
+      "source_image_id": 9083,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": null,
+      "status": "abstain_unsupported"
+    },
+    {
+      "case_id": "F39",
+      "group": "jumpsuit",
+      "accepted": [],
+      "kind": "public_original",
+      "source_image_id": 13011,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": null,
+      "status": "abstain_unsupported"
+    },
+    {
+      "case_id": "F40",
+      "group": "jumpsuit",
+      "accepted": [],
+      "kind": "public_original",
+      "source_image_id": 16504,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": null,
+      "status": "abstain_unsupported"
+    },
+    {
+      "case_id": "F41",
+      "group": "jumpsuit",
+      "accepted": [],
+      "kind": "public_original",
+      "source_image_id": 19551,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": null,
+      "status": "abstain_unsupported"
+    },
+    {
+      "case_id": "F42",
+      "group": "jumpsuit",
+      "accepted": [],
+      "kind": "public_original",
+      "source_image_id": 11240,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": null,
+      "status": "abstain_unsupported"
+    },
+    {
+      "case_id": "F43",
+      "group": "cape",
+      "accepted": [],
+      "kind": "public_original",
+      "source_image_id": 17195,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": "jacket",
+      "status": "unsupported_specific_needs_review"
+    },
+    {
+      "case_id": "F44",
+      "group": "cape",
+      "accepted": [],
+      "kind": "public_original",
+      "source_image_id": 10691,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": null,
+      "status": "abstain_unsupported"
+    },
+    {
+      "case_id": "F45",
+      "group": "cape",
+      "accepted": [],
+      "kind": "public_original",
+      "source_image_id": 17764,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": null,
+      "status": "abstain_unsupported"
+    },
+    {
+      "case_id": "F46",
+      "group": "cardigan",
+      "accepted": [],
+      "kind": "public_original",
+      "source_image_id": 11720,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": null,
+      "status": "abstain_unsupported"
+    },
+    {
+      "case_id": "F47",
+      "group": "cardigan",
+      "accepted": [],
+      "kind": "public_original",
+      "source_image_id": 9223,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": false,
+      "predicted": null,
+      "status": "abstain_unsupported"
+    },
+    {
+      "case_id": "F48",
+      "group": "cardigan",
+      "accepted": [],
+      "kind": "public_original",
+      "source_image_id": 16537,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": null,
+      "status": "abstain_unsupported"
+    },
+    {
+      "case_id": "F49",
+      "group": "cardigan",
+      "accepted": [],
+      "kind": "public_original",
+      "source_image_id": 17312,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": null,
+      "status": "abstain_unsupported"
+    },
+    {
+      "case_id": "F50",
+      "group": "cardigan",
+      "accepted": [],
+      "kind": "public_original",
+      "source_image_id": 9891,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": null,
+      "status": "abstain_unsupported"
+    },
+    {
+      "case_id": "F51",
+      "group": "cardigan",
+      "accepted": [],
+      "kind": "public_original",
+      "source_image_id": 11393,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": null,
+      "status": "abstain_unsupported"
+    },
+    {
+      "case_id": "F52",
+      "group": "vest",
+      "accepted": [],
+      "kind": "public_original",
+      "source_image_id": 18991,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": null,
+      "status": "abstain_unsupported"
+    },
+    {
+      "case_id": "F53",
+      "group": "vest",
+      "accepted": [],
+      "kind": "public_original",
+      "source_image_id": 18606,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": null,
+      "status": "abstain_unsupported"
+    },
+    {
+      "case_id": "F54",
+      "group": "vest",
+      "accepted": [],
+      "kind": "public_original",
+      "source_image_id": 17090,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": false,
+      "predicted": null,
+      "status": "abstain_unsupported"
+    },
+    {
+      "case_id": "F55",
+      "group": "vest",
+      "accepted": [],
+      "kind": "public_original",
+      "source_image_id": 12565,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": null,
+      "status": "abstain_unsupported"
+    },
+    {
+      "case_id": "F56",
+      "group": "vest",
+      "accepted": [],
+      "kind": "public_original",
+      "source_image_id": 10542,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": null,
+      "status": "abstain_unsupported"
+    },
+    {
+      "case_id": "F57",
+      "group": "vest",
+      "accepted": [],
+      "kind": "public_original",
+      "source_image_id": 11902,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": null,
+      "status": "abstain_unsupported"
+    },
+    {
+      "case_id": "F58",
+      "group": "hooded_jacket",
+      "accepted": [
+        "jacket"
+      ],
+      "kind": "public_original",
+      "source_image_id": 10957,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": "jacket",
+      "status": "correct"
+    },
+    {
+      "case_id": "F59",
+      "group": "hoodie",
+      "accepted": [
+        "hoodie"
+      ],
+      "kind": "public_original",
+      "source_image_id": 12452,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": "hoodie",
+      "status": "correct"
+    },
+    {
+      "case_id": "F60",
+      "group": "hoodie",
+      "accepted": [
+        "hoodie"
+      ],
+      "kind": "public_original",
+      "source_image_id": 12197,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": "jacket",
+      "status": "wrong_specific"
+    },
+    {
+      "case_id": "F61",
+      "group": "collared_top",
+      "accepted": [
+        "t-shirt",
+        "shirt"
+      ],
+      "kind": "public_original",
+      "source_image_id": 19669,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": null,
+      "status": "abstain"
+    },
+    {
+      "case_id": "F62",
+      "group": "hoodie",
+      "accepted": [
+        "hoodie"
+      ],
+      "kind": "public_original",
+      "source_image_id": 10266,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": "hoodie",
+      "status": "correct"
+    },
+    {
+      "case_id": "F63",
+      "group": "hoodie",
+      "accepted": [
+        "hoodie"
+      ],
+      "kind": "public_original",
+      "source_image_id": 17958,
+      "ground_truth_basis": "Fashionpedia human annotations; hood samples visually reviewed before inference",
+      "subject_visible": true,
+      "predicted": "hoodie",
+      "status": "correct"
+    },
+    {
+      "case_id": "R01",
+      "group": "large_subject",
+      "accepted": [
+        "jacket"
+      ],
+      "kind": "derived",
+      "source_image_id": 12344,
+      "ground_truth_basis": "Same F24 image scaled, not a measured physical distance",
+      "predicted": "jacket",
+      "status": "correct"
+    },
+    {
+      "case_id": "R02",
+      "group": "medium_subject",
+      "accepted": [
+        "jacket"
+      ],
+      "kind": "derived",
+      "source_image_id": 12344,
+      "ground_truth_basis": "Same F24 image scaled, not a measured physical distance",
+      "predicted": "jacket",
+      "status": "correct"
+    },
+    {
+      "case_id": "R03",
+      "group": "small_subject",
+      "accepted": [
+        "jacket"
+      ],
+      "kind": "derived",
+      "source_image_id": 12344,
+      "ground_truth_basis": "Same F24 image scaled, not a measured physical distance",
+      "predicted": "jacket",
+      "status": "correct"
+    },
+    {
+      "case_id": "R04",
+      "group": "blur",
+      "accepted": [
+        "jacket"
+      ],
+      "kind": "derived",
+      "source_image_id": 12344,
+      "ground_truth_basis": "Documented transform of F24; face-hidden/empty expects neutral",
+      "predicted": "jacket",
+      "status": "correct",
+      "expect_neutral": false
+    },
+    {
+      "case_id": "R05",
+      "group": "low_light",
+      "accepted": [
+        "jacket"
+      ],
+      "kind": "derived",
+      "source_image_id": 12344,
+      "ground_truth_basis": "Documented transform of F24; face-hidden/empty expects neutral",
+      "predicted": "jacket",
+      "status": "correct",
+      "expect_neutral": false
+    },
+    {
+      "case_id": "R06",
+      "group": "sideways_camera",
+      "accepted": [
+        "jacket"
+      ],
+      "kind": "derived",
+      "source_image_id": 12344,
+      "ground_truth_basis": "Documented transform of F24; face-hidden/empty expects neutral",
+      "predicted": null,
+      "status": "abstain",
+      "expect_neutral": false
+    },
+    {
+      "case_id": "R07",
+      "group": "no_person",
+      "accepted": [],
+      "kind": "derived",
+      "source_image_id": 12344,
+      "ground_truth_basis": "Documented transform of F24; face-hidden/empty expects neutral",
+      "predicted": null,
+      "status": "correct_neutral",
+      "expect_neutral": true
+    },
+    {
+      "case_id": "R08",
+      "group": "clothing_without_face",
+      "accepted": [],
+      "kind": "derived",
+      "source_image_id": 12344,
+      "ground_truth_basis": "Documented transform of F24; face-hidden/empty expects neutral",
+      "predicted": null,
+      "status": "correct_neutral",
+      "expect_neutral": true
+    },
+    {
+      "case_id": "R09",
+      "group": "two_people_larger_jacket_subject",
+      "accepted": [
+        "jacket"
+      ],
+      "kind": "derived",
+      "source_image_id": 12344,
+      "ground_truth_basis": "F01 shirt left small, F24 jacket right larger; production selects largest face",
+      "predicted": "jacket",
+      "status": "correct"
+    }
+  ]
+}
