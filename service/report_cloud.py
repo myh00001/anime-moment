@@ -33,7 +33,7 @@ def opener():
     return urllib.request.build_opener(urllib.request.ProxyHandler({}),NoRedirect())
 
 
-def request(payload,key,timeout=25,transport=None):
+def request(payload,key,timeout=10,transport=None):
     key=validate_key(key)
     if not key:raise CloudError('MissingAPIKey','请先在设置中填写 DeepSeek API Key')
     req=urllib.request.Request(ENDPOINT,data=json.dumps(payload).encode('utf-8'),

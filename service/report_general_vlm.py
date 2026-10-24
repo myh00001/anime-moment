@@ -154,7 +154,7 @@ class VisionRuntime:
             http_started=time.monotonic()
             ffn_profile=None
             try:
-                with self.opener.open(request,timeout=32) as response:
+                with self.opener.open(request,timeout=30) as response:
                     data=json.load(response)
                 http_seconds=time.monotonic()-http_started
                 if self.ffn is not None:ffn_profile=self.ffn.finish(ffn_since)

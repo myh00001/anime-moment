@@ -16,7 +16,7 @@ Cloud generation sends the saved **camera original**, not the anime preview,
 directly to `https://api.deepseek.com/chat/completions`, with model
 `deepseek-flash`. It preserves the original aspect ratio and caps the long edge
 at 1536 pixels before JPEG upload. Image detail is `high`; thinking is disabled,
-and output is bounded to 240 tokens with a 25-second HTTP timeout. The model
+and output is bounded to 240 tokens with a 10-second HTTP timeout. The model
 receives the campus festival background and instructions to describe visible
 pose, expression, actions or surroundings conservatively, then connect them to
 the AI photo experience. It does not require local image recognition first.
