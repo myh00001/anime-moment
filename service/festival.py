@@ -160,6 +160,7 @@ class Festival:
         self.latest=latest;self.notify=notify;self.running=running
         self.configuration=configuration;self.wait_inference_idle=wait_inference_idle
         self.weather=WeatherCache(ROOT/'weather-cache.json',running)
+        self.gesture_released=threading.Event();self.gesture_released.set()
         self.lock=threading.Lock();self.deadline=None;self.min_sequence=None;self.shutter_at=0;self.pickup_at=0;self.ai_busy_at=0;self.report_stage=''
         self.status='比 ✌ 即可开始 3 秒拍照倒计时';self.jobs=queue.Queue(maxsize=2)
         self.directory=ROOT/'captures';self.directory.mkdir(exist_ok=True)
@@ -189,7 +190,46 @@ class Festival:
                 self.jobs.put_nowait((rgb.copy(),options,original));self.shutter_at=time.monotonic();self.status='正在生成报纸…'
             except queue.Full:
                 self.ai_busy_at=0;self.report_stage='';self.status='打印任务繁忙，请稍后再拍'
+    def yolo_gesture_loop(self,detector):
+        self.gesture_backend='YOLOv10n · S100 BPU'
+        print('GESTURE_RUNTIME',self.gesture_backend,flush=True)
+        latch=GestureLatch();last=-1;last_status=0
+        while self.running():
+            if getattr(self,'ai_busy_at',0):
+                if detector.runtime is not None:
+                    detector.runtime=None
+                    import gc;gc.collect()
+                self.gesture_released.set()
+                time.sleep(.05);continue
+            if detector.runtime is None:
+                from hbm_runtime import HB_HBMRuntime
+                self.gesture_released.clear()
+                detector.runtime=HB_HBMRuntime(str(ROOT/'models/hagrid_gesture.hbm'))
+                detector.name=detector.runtime.model_names[0]
+            start=time.monotonic();seq,frame=self.latest();detected=False
+            if frame is not None and seq!=last:
+                last=seq;detected=detector.detect(frame)
+                if latch.update(detected,time.monotonic()):self.trigger()
+                if time.monotonic()-last_status>2:
+                    last_status=time.monotonic()
+                    (ROOT/'gesture-status.json').write_text(json.dumps({'backend':self.gesture_backend,'input_size':detector.size,'threshold':detector.threshold,'confirmation_seconds':.1,'processing_ms':(last_status-start)*1000,'time':time.time()}))
+            interval=.05 if detected and latch.armed else (.2 if not latch.armed else .12)
+            time.sleep(max(.02,interval-(time.monotonic()-start)))
+
     def gesture_loop(self):
+        try:
+            model=ROOT/'models/hagrid_gesture.hbm'
+            metadata=ROOT/'gesture-model.json'
+            if model.is_file() and metadata.is_file() and not (ROOT/'gesture-yolo-disabled').exists():
+                from gesture_yolo import BpuGestureDetector
+                options=json.loads(metadata.read_text())
+                self.gesture_released.clear()
+                detector=BpuGestureDetector(model,size=options['input_size'],threshold=options.get('threshold',.5))
+                self.yolo_gesture_loop(detector);return
+        except Exception as error:
+            print('GESTURE_YOLO_FALLBACK',type(error).__name__,str(error)[:160],flush=True)
+        self.gesture_released.set()
+        self.gesture_backend='MediaPipe · CPU'
         try:
             import cv2
             from festival_vendor.mp_palmdet import MPPalmDet
@@ -266,6 +306,8 @@ class Festival:
                 if options.get('ai_report',False):
                     self.status='照片已保存，正在本地生成报道…'
                     inference_ready=getattr(self,'wait_inference_idle',lambda:True)()
+                    if inference_ready and hasattr(self,'gesture_released'):
+                        inference_ready=self.gesture_released.wait(5)
                 original=folder/'original.jpg'
                 if original_bgr is not None:
                     Image.fromarray(original_bgr[:,:,::-1]).save(original,quality=96,subsampling=0)

@@ -32,9 +32,10 @@ def warm_local_model():
                    env=env,check=True,capture_output=True,timeout=6)
 
 def warm_report_runtime():
-    """Start the local writing model and cache its helper environment."""
+    """Preload the language models without taking the BPU from the preview."""
     warm_local_model()
-    helper_environment(time.monotonic()+3)
+    from report_general_vlm import warm
+    warm()
 
 def clean_report(value):
     value=re.sub(r'<think>.*?</think>','',str(value),flags=re.S)
@@ -239,42 +240,43 @@ class LocalReporter:
             result=json.load(response)
         return result['choices'][0]['message']['content']
 
+def report_fact_sentence(value):
+    value=re.sub(r'\s+','',str(value)).strip('“”"')
+    finished=value.endswith(('。','！','？'))
+    if '。' in value:value=value.split('。',1)[0]
+    elif not finished and len(value)>=30 and '，' in value:value=value.rsplit('，',1)[0]
+    value=re.sub(r'^(?:照片|图像)中','画面中',value)
+    value=re.sub(r'(?:一位|一名|一个)?(?:年轻的?|中年的?)?(?:女性|男性|男子|女子|女孩|男孩|女士|男士)','人物',value)
+    if len(re.findall(r'[\u4e00-\u9fff]',value))<4:raise ValueError('No usable image observation')
+    return value.rstrip('，、；：。！？')+'。'
+
+
 class GeneralVLMReporter:
-    """Generate a newspaper paragraph directly from this capture's original."""
+    """Generate image facts and activity context with local generative models."""
     def generate(self,photo):
-        import signal
+        from concurrent.futures import ThreadPoolExecutor
+        from report_general_vlm import generate
         warm_local_model()
-        helper=Path(__file__).with_name('report_general_vlm.py')
-        env=helper_environment(time.monotonic()+3)
-        command=['python3',str(helper),str(photo)]
-        if env is None:
-            command=['bash','-c','source /opt/tros/humble/setup.bash && exec python3 "$@"',
-                     'general-report',str(helper),str(photo)]
-        process=subprocess.Popen(command,stdout=subprocess.PIPE,stderr=subprocess.PIPE,
-                                 start_new_session=True,env=env)
-        try:
-            output,_=process.communicate(timeout=38)
-        except subprocess.TimeoutExpired:
-            os.killpg(process.pid,signal.SIGKILL);process.communicate()
-            raise TimeoutError('通用看图大模型生成超时')
-        if process.returncode:raise RuntimeError('通用看图大模型生成失败')
-        lines=output.decode('utf-8',errors='replace').splitlines()
-        result=json.loads(next(line.split('=',1)[1] for line in reversed(lines)
-                               if line.startswith('GENERAL_VLM_RESULT=')))
+        def background():
+            start=time.monotonic();writer=LocalReporter()
+            payload={'messages':[{'role':'system','content':'为校园科技节纪念报纸写一句15至25字的中文背景报道。只依据提供的作品功能，不描述当前照片中的人或场景，不用比喻，不说已经打印。只输出一个完整句子。'},
+                {'role':'user','content':'AI动漫拍报机把摄像头影像转成动漫，生成科技节纪念报纸。请写出它的纪念意义。/no_think'}],
+                'max_tokens':64,'temperature':.2,'top_p':.9,'cache_prompt':True,'stream':False,
+                'chat_template_kwargs':{'enable_thinking':False},
+                'grammar':'root ::= "AI" [一-鿿，、]{10,36} "。"'}
+            text=writer.complete(WRITER_ENDPOINT,payload,start+12)
+            return text,round(time.monotonic()-start,3)
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            future=pool.submit(background)
+            result=generate(photo)
+            context,self.writer_seconds=future.result()
+        self.acceleration_fallback=result.get('acceleration_fallback')
+        self.vision_profile={k:result.get(k) for k in ['startup_seconds','inference_seconds','encoder_load_seconds','encoder_seconds','encoder_cleanup_seconds','http_seconds']}
         self.backend=result['backend'];self.vision_model=result['model']
         self.vision_decoder='generative multimodal decoder'
-        self.vision_seconds=result['seconds']
-        self.last_caption=result['text']
-        writer=LocalReporter()
-        deadline=time.monotonic()+15
-        writer.wait_ready(deadline,True)
-        from report_general_vlm import PROMPT as general_prompt
-        payload={'messages':[{'role':'system','content':general_prompt},
-                 {'role':'user','content':'画面观察：'+self.last_caption+'\n请写一段简短的现场报道，仅依据观察，不添加观察之外的人物或动作。/no_think'}],
-                 'max_tokens':160,'temperature':0,'chat_template_kwargs':{'enable_thinking':False},
-                 'grammar':'root ::= first "。AI" second "。"\nfirst ::= [一-鿿] [一-鿿，、]{10,35}\nsecond ::= [一-鿿] [一-鿿，、]{14,32}',
-                 'stream':False}
-        return clean_report(writer.complete(WRITER_ENDPOINT,payload,deadline))
+        self.vision_seconds=result['seconds'];self.last_caption=result['text']
+        self.writing_mode='parallel generative image facts and activity context'
+        return clean_report(report_fact_sentence(self.last_caption)+context)
 
 
 def make_report(photo,enabled,reporter=None):
@@ -290,9 +292,11 @@ def make_report(photo,enabled,reporter=None):
         if isinstance(getattr(engine,'vision_decoder',None),str):result['vision_decoder']=engine.vision_decoder
         if isinstance(getattr(engine,'subject',None),dict):result['subject']=engine.subject
         if isinstance(getattr(engine,'vision_seconds',None),(int,float)):result['vision_seconds']=engine.vision_seconds
+        if isinstance(getattr(engine,'vision_profile',None),dict):result['vision_profile']=engine.vision_profile
+        if isinstance(getattr(engine,'writer_seconds',None),(int,float)):result['writer_seconds']=engine.writer_seconds
+        if isinstance(getattr(engine,'writing_mode',None),str):result['writing_mode']=engine.writing_mode
+        if isinstance(getattr(engine,'acceleration_fallback',None),str):result['acceleration_fallback']=engine.acceleration_fallback
         return result
     except Exception as error:
         return {'enabled':True,'state':'fallback','reason':type(error).__name__,
                 'seconds':round(time.monotonic()-start,2)}
-
-

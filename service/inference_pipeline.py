@@ -77,7 +77,7 @@ def render_worker(slot, tasks, events, release_stage='structure'):
             events.put(('error', slot, seq, repr(exc)))
 
 
-def run_pipeline(latest, running, release_stage=None, configuration=None, paused=lambda:False, idle=lambda value:None):
+def _pipeline_session(latest, running, release_stage=None, configuration=None, paused=lambda:False, idle=lambda value:None):
     """Yield ordered completed frames; latest() returns (camera_sequence, BGR)."""
     if release_stage is None:
         from native_math import AVAILABLE
@@ -116,7 +116,8 @@ def run_pipeline(latest, running, release_stage=None, configuration=None, paused
             if busy and time.monotonic() - progress > 30:
                 raise RuntimeError('BPU worker stalled')
             is_paused=paused()
-            idle(is_paused and not busy)
+            if is_paused and not busy:return
+            idle(False)
             if not is_paused and can_submit and next_slot not in busy:
                 seq, frame = latest()
                 if frame is not None and seq != previous:
@@ -156,3 +157,14 @@ def run_pipeline(latest, running, release_stage=None, configuration=None, paused
         events.close()
         for task in tasks:
             task.close()
+
+
+def run_pipeline(latest,running,release_stage=None,configuration=None,paused=lambda:False,idle=lambda value:None):
+    """Release all render-model contexts while a photo report owns the BPU."""
+    while running():
+        while running() and paused():
+            idle(True)
+            time.sleep(.05)
+        if not running():break
+        idle(False)
+        yield from _pipeline_session(latest,running,release_stage,configuration,paused,idle)
