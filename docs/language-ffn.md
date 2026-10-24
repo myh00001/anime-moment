@@ -96,7 +96,8 @@ The full 27-layer and early 9-layer variants were rejected as the default:
 operator-level speedups did not consistently offset lifecycle overhead, and
 some outputs changed an object subtype. Recycling native contexts also failed
 repeat-call tests. The shared-worker candidate remains opt-in, with the
-production manifest absent, pending a separately reviewed live integration.
+production manifest absent. A subsequent temporary live check below did not
+establish a stable camera-path speedup.
 
 A second [current-camera scene test](benchmarks/language-ffn-current-scene-20261024.json)
 included first-use artifact verification and native loading. The candidate
@@ -109,3 +110,20 @@ verification off the shutter path, but this still requires a live integration
 check. The unchanged production app separately measured 12.420/11.816 s from
 photo save to PDF in two real camera captures; these include active-app
 scheduling costs and should not be substituted for paused-preview timings.
+
+## Temporary real-camera integration result
+
+The [two approved temporary captures](benchmarks/language-ffn-live-20261024.json)
+used PDF-only output and restored the original program and AI/print settings in
+`finally`. The first report timed out after 32.950 s; its 34.216 s fallback PDF
+is **not** counted as a successful generated report. The second succeeded with
+all eighteen FFN calls, taking **12.388 s photo-to-PDF**, or **15.963 s including
+the countdown and capture scheduling**. Its report stage took 11.040 s.
+
+The unchanged real-camera controls were 12.420 and 11.816 s photo-to-PDF.
+These few sequential captures are not an identical-image statistical test and
+do not demonstrate a stable real-camera acceleration. The isolated warm gain
+has not transferred to the live application. The experimental manifest was
+removed and the original production files restored byte-for-byte; normal
+preview, AI reports, printing and Restart=no were verified afterward. Keep this
+prototype disabled while investigating live scheduling/runtime interaction.

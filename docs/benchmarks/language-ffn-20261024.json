@@ -1,6 +1,6 @@
 {
   "date": "2026-10-24",
-  "status": "isolated_candidate_not_enabled",
+  "status": "candidate_disabled_after_live_regression_check",
   "model": "InternVL3-2B-Instruct-Q8_0",
   "writer": "Qwen3-0.6B-Q8_0",
   "bpu_ffn_layers": [
