@@ -21,3 +21,5 @@ BPU 视觉特征桥接使用可选 S100_VLM_EMBED_FILE，严格检查特征形�
 保留上一轮 BPU 视觉编码 + CPU 语言生成。后续只有取得适配 S100 nash-e 的编译器、权重和视觉输入接口后，才可对同图进行准确性与延迟对照；不能把更换成普通 Qwen2.5 文字模型当作同一个看图模型的加速。
 
 来源：[S100 SDK](https://developer.d-robotics.cc/rdk_s_doc/Advanced_development/toolchain_development/LLM_Toolchain/rdk_s100/s100_LLM_Toolchain)、[API 枚举](https://developer.d-robotics.cc/oe_llm_s100p_doc/guide/api/api_details/structure_and_enumeration_type.html)、[编译器参数](https://developer.d-robotics.cc/oe_llm_s100p_doc/guide/tool_introduction/oellm_build)、[官方服务源码](https://github.com/D-Robotics/oellm_server/tree/develop)。
+
+补充：通用编译器的第一阶段自适配已在板端运行真实 QKV 投影，见[实验记录](experimental-language-bpu.md)。这验证了单块计算可自行适配，不改变上述完整 SDK 接口限制，也尚未构成生产语言 BPU 后端。

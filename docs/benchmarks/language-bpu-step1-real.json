@@ -1,0 +1,34 @@
+{
+  "layer": 0,
+  "tokens": 256,
+  "threads": 6,
+  "load_ms": 6.048380000720499,
+  "scope": "Single QKV only; saved real activations; CPU reference is float32 BLAS",
+  "in_range_numeric_pass": true,
+  "results": [
+    {
+      "case": 0,
+      "scale": null,
+      "cosine": 0.9999807474111302,
+      "relative_l2": 0.00620528996118953,
+      "bpu_ms_median": 1.6710135000721493,
+      "cpu_float_blas_ms_median": 14.002937500208645
+    },
+    {
+      "case": 1,
+      "scale": null,
+      "cosine": 0.9999809337542616,
+      "relative_l2": 0.00617525685241253,
+      "bpu_ms_median": 1.6591640001024643,
+      "cpu_float_blas_ms_median": 13.422549499864544
+    },
+    {
+      "case": 2,
+      "scale": null,
+      "cosine": 0.9999802157761155,
+      "relative_l2": 0.0062903243364081565,
+      "bpu_ms_median": 1.6432765000899963,
+      "cpu_float_blas_ms_median": 13.41853700023421
+    }
+  ]
+}
